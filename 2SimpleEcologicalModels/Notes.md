@@ -6,20 +6,42 @@ First, let's simulate simple logistic growth. Remember from the lecture that:
 
 dN/dt = rN((K-N)/K)
 
-Therefore:
+To solve this in R, we will use the deSolve package:
 
-N<sub>t+1</sub> = N<sub>t</sub> + rN<sub>t</sub>((K-N<sub>t</sub>)/K)
+```R
+install.packages("deSolve")
+library(deSolve)
+```
 
-Simulate this in R, with a starting abundance (N) of 1:
+```R
+lgModel <- function(time, state, pars){
+	with(as.list(c(state, pars)), {
+		dN <- r * N * ((K - N) / K)
+		list(dN)
+	})
+}
+
+state <- c(N = 1)
+pars <- c(r = 0.02, K = 1000)
+times <- seq(from = 0, to = 1000, by = 1)
+
+out <- ode(state, times, lgModel, pars)
+
+```
+
+
+
+
+
 
 ```R
 numTimeSteps <- 1000
 N <- numeric(numTimeSteps)
-r <- 10
+r <- 100
 K <- 1000
 N[1] <- 1
 for (i in 2:numTimeSteps){
-	N[i] <- N[i-1] + r * N[i-1] * ((K - N[i-1])/K)
+	N[i] <- (K * N[i-1] * exp(r)) / (K + N[i-1] * (exp(r) - 1))
 }
 ```
 
