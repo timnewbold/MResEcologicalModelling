@@ -109,4 +109,26 @@ points(dfLVC$time, dfLVC$N2, type = "l", col = "blue")
 
 Try varying the starting conditions (but not the parameters). Species 1 should always outcompete species 2.
 
+Now let's explore the case where the species co-exist stably, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>2</sub>/&#945;<sub>21</sub> > K<sub>1</sub>:
+
+```R
+K1 <- 200
+a12 <- 0.1
+K2 <- 100
+a21 <- 0.1
+```
+Plot the isoclines for these parameters (you will need to change the axis limits a bit). The lines should cross this time, and because population growth of species 2 is favoured when species 1 is more abundant, and vice versa, we expect stable coexistence of the two species.
+
+Now run the model again. You should find that the two species stably coexist whatever initial abundances you set.
+
+Finally, let's simulate the case where we expect unstable coexistence, or different outcomes depending on the starting conditions, i.e. where K<sub>2</sub> > K<sub>1</sub>/&#945;<sub>12</sub> and K<sub>1</sub> > K<sub>2</sub>/&#945;<sub>21</sub>:
+
+```R
+K1 <- 200
+a12 <- 1.5
+K2 <- 150
+a21 <- 0.9
+```
+
+When you are simulating this model, you will probably need to increase the number of time steps in order to reach an equilibrium state. By varying the starting abundances of the species, you should be able to achieve cases where each species prevails.
 
