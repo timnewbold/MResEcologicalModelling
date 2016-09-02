@@ -2,7 +2,9 @@
 
 ## Lotka-Volterra Competition Model
 
-First, let's simulate simple logistic growth. Remember from the lecture that:
+### Simple Logistic Growth
+
+First, let's simulate simple logistic growth. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2_SimpleEcologicalModels.pdf">lecture</a> that:
 
 dN/dt = rN((K-N)/K)
 
@@ -14,6 +16,7 @@ library(deSolve)
 ```
 
 ```R
+# Define the model
 lgModel <- function(time, state, pars){
 	with(as.list(c(state, pars)), {
 		dN <- r * N * ((K - N) / K)
@@ -21,32 +24,89 @@ lgModel <- function(time, state, pars){
 	})
 }
 
+# Set the starting conditions and parameters
 state <- c(N = 1)
 pars <- c(r = 0.02, K = 1000)
 times <- seq(from = 0, to = 1000, by = 1)
 
-out <- ode(state, times, lgModel, pars)
-
+# Run and plot the model
+outLG <- ode(state, times, lgModel, pars)
+plot(outLG)
 ```
 
+Try adjusting the parameters to explore the model behaviour.
 
+### Adding competition
 
+Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2_SimpleEcologicalModels.pdf">lecture</a> that the Lotka-Volterra model is simply a logistic growth model for two species, with extra terms to represent the competitive effect that each species has on the other:
 
+dN<sub>1</sub>/dt = r<sub>1</sub>N<sub>1</sub>((K<sub>1</sub>-N<sub>1</sub>-&#945;<sub>12</sub>N<sub>2</sub>)/K<sub>1</sub>)
 
+and:
+
+dN<sub>2</sub>/dt = r<sub>2</sub>N<sub>2</sub>((K<sub>2</sub>-N<sub>2</sub>-&#945;<sub>21</sub>N<sub>1</sub>)/K<sub>2</sub>)
+
+First, let's simulate a case where species 1 competitively excludes species 2, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>1</sub> > K<sub>2</sub>/&#945;<sub>21</sub>:
 
 ```R
-numTimeSteps <- 1000
-N <- numeric(numTimeSteps)
-r <- 100
-K <- 1000
-N[1] <- 1
-for (i in 2:numTimeSteps){
-	N[i] <- (K * N[i-1] * exp(r)) / (K + N[i-1] * (exp(r) - 1))
+K1 <- 200
+a12 <- 0.25
+K2 <- 80
+a21 <- 0.5
+```
+
+We can plot the zero isoclines for the species under these parameters:
+
+```R
+# First create a empty plot 
+# (the 'expression(paste())' bit allows the sucscripts)
+plot(
+-9999, -9999, xlim = c(0, 200), ylim = c(0, 800), 
+xlab = expression(paste("N"[1])), # (the 'expression(paste())' bit allows the sucscripts)
+ylab = expression(paste("N"[2])), # (the 'expression(paste())' bit allows the sucscripts)
+xaxs="i",yaxs="i" # These parameters remove white space at the ends of the axes
+)
+
+# Now plot the zero iscoline for species 1
+segments(0, K1/a12, K1, 0, col = "red", lwd = 2)
+# And for species 2
+segments(0, K2, K2/a21, 0, col = "blue", lwd = 2)
+```
+
+Since the isoclines don't cross and the line for species 1 is always above and to the right of the line for species 2, we know that species 1 should always competitively exclude species 2. But we will simulate this just to check:
+
+```R
+# We will set the per-capita growth rates equal:
+r1 = 0.02
+r2 = 0.02
+
+# Define the model
+lvcModel <- function(time,state,pars){
+	with(as.list(c(state,pars)), {
+		dN1 <- r1 * N1 * ((K1 - N1 - a12 * N2) / K1)
+		dN2 <- r2 * N2 * ((K2 - N2 - a21 * N1) / K2)
+		list(c(dN1, dN2))
+	})
 }
+
+# Set the starting conditions and parameters
+state <- c(N1 = 1, N2 = 1)
+pars <- c(r1 = r1, r2 = r2, K1 = K1, K2 = K2, a12 = a12, a21 = a21)
+times <- seq(from = 0, to = 1000, by = 1)
+
+# Run and plot the model
+outLVC <- ode(state, times, lvcModel, pars)
+plot(outLVC)
+
+# By default the two species are plotted side-by-side
+# We can also plot them on the same plot manually
+dev.off() # This resets the graphics device
+dfLVC <- data.frame(outLVC)
+plot(dfLVC$time, dfLVC$N1, type = "l", col = "red",
+xlab = "Time", ylab = "N", ylim = c(0,max(c(dfLVC$N1,dfLVC$N2))))
+points(dfLVC$time, dfLVC$N2, type = "l", col = "blue")
 ```
 
-Simulate a case where species 1 competitively excludes species 2, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and 
+Try varying the starting conditions (but not the parameters). Species 1 should always outcompete species 2.
 
-```R
-K1 <- 100
-```
+
