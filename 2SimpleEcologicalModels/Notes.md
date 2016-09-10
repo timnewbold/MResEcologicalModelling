@@ -132,3 +132,44 @@ a21 <- 0.9
 
 When you are simulating this model, you will probably need to increase the number of time steps in order to reach an equilibrium state. By varying the starting abundances of the species, you should be able to achieve cases where each species prevails.
 
+## Lotka-Volterra Predation Model
+
+First define the model describing changes in the abundance of both predators and prey, where N and P are the numbers of prey and predators, respectively, r is the intrinsic growth rate of the prey population, a is the attack rate of the predator on the prey, e is the conversion efficiency of energy during predation, and m is predator mortality:
+
+```R
+lvpModel <- function(time,state,pars){
+	with(as.list(c(state,pars)), {
+		dN <- r * N - a * N * P
+		dP <- e * a * N * P - m * P
+		list(c(dN, dP))
+	})
+}
+```
+Now run the model:
+
+```R
+# Set the starting conditions and parameters
+state <- c(N = 1000, P = 800)
+pars <- c(r = 0.01,a=0.00005,e=0.1,m=0.01)
+times <- seq(from = 0, to = 10000, by = 1)
+
+# Run and plot the model
+outLVP <- ode(state, times, lvpModel, pars)
+plot(outLVP)
+```
+
+As before, we can plot both species on the same graph:
+
+```R
+with(data.frame(outLVP),{
+	plot(time,N,type="l",log="y",ylim=c(10,10000),col="blue")
+	points(time,P,type="l",col="red")
+})
+
+```
+
+Now try varying some of the parameters to explore the behaviour of the model.
+
+## Rosenzweig-MacArthur predation and competition model
+
+The Lotka-Volterra predator-prey model assumes that, in the absence of predators, prey populations grow exponentially. However, competition among species mean that this is unrealistic. The Rosenzweig-MacArthur model includes both competitive and consumption effects of species on each other.
