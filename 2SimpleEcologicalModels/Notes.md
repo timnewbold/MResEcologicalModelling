@@ -173,3 +173,68 @@ Now try varying some of the parameters to explore the behaviour of the model.
 ## Rosenzweig-MacArthur predation and competition model
 
 The Lotka-Volterra predator-prey model assumes that, in the absence of predators, prey populations grow exponentially. However, competition among species mean that this is unrealistic. The Rosenzweig-MacArthur model includes both competitive and consumption effects of species on each other.
+
+We will use the version of the Rosenzweig-MacArthur model as implemented in Saterberg et al. (2013).
+
+We will simulate a simple system with 10 species: 5 primary producers, 3 primary consumers (e.g. herbivores) and 2 secondary consumers (e.g. carnivores). We will assume that two of the primary consumers are specialists and one is a generalist, and that one of the consumers is a specialist and one is a generalist.
+
+```
+rmModel <- function(time,state,pars){
+  dN <- numeric(length(state))
+  for (s in 1:length(state)){
+    dN[s] <- pars$r[s] * state[s] - 
+      state[s] * sum(pars$alpha.comp[s,1:length(state)] * state) - 
+      state[s]^2 * sum((pars$pref[s,1:length(state)] * pars$a * state)/
+                         (1+pars$T * sum(pars$pref[s,1:length(state)] * pars$a * state)))
+  }
+  list(dN)
+}
+
+# Start the 5 species with abundances that decline with trophic level
+state <- c(rep(1000,5),rep(500,3),rep(100,2))
+# Let's assume that all resource species have the same intrinsic rate of population growth
+# and all consumers have the same mortality rate
+pars <- list(r=c(rep(0.01,5),rep(-0.01,3),rep(-1e-3,2)))
+
+pars$a <- 1.5
+pars$T <- 0.2
+
+# Now, create a matrix of 0s to hold competition coefficients
+pars$alpha.comp <- matrix(0,nrow=10,ncol=10)
+
+# Intraspecific competition among producers is set to 1, 
+# and among consumers to 0.01
+diag(pars$alpha.comp) <- c(rep(1e-5,5),rep(1e-6,5))
+
+# Interspecific competition among prodcuers is set to 0.5
+# (consumers are assumed not to show direct interspecific compeitition,
+# but to compete only through shared resources)
+pars$alpha.comp[1:5,1:5][lower.tri(pars$alpha.comp[1:5,1:5])]<-5e-7
+pars$alpha.comp[1:5,1:5][upper.tri(pars$alpha.comp[1:5,1:5])]<-5e-7
+
+# Create a matrix of 0s to hold consumer preferences
+pars$pref <- matrix(0,nrow=10,ncol=10)
+
+# Let's assume that the first primary consumer has a strong preference for one
+# of the producer species
+pars$pref[1:5,6] <- c(0.9,0.025,0.025,0.025,0.025)
+# The second primary consumer specializes equally on two producer species
+pars$pref[1:5,7] <- c(0.1,0.35,0.35,0.1,0.1)
+# The other primary consumer species is a generalist
+pars$pref[1:5,8] <- rep(0.2,5)
+
+# Let's assume that one secondary consumer specializes on one of the primary consumers
+pars$pref[6:8,9] <- c(0.9,0.05,0.05)
+# The other secondary consumer is a generalist
+pars$pref[6:8,10] <- c(1/3,1/3,1/3)
+
+times <- seq(from=0,to=1000,by=1)
+outRM <- ode(state,times,rmModel,pars)	
+
+```
+
+## References
+
+Saterberg, T., Sellman, S. & Ebenman, B. (2013). High frequency of functional extinctions in ecological networks. <i>Nature</i> <b>499</b>: 468-470.
+
+
