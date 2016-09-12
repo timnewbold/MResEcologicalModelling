@@ -1,6 +1,6 @@
 # Session 2: Simple Theoretical Ecological Models
 
-## Lotka-Volterra Competition Model
+## Exercise 1: Lotka-Volterra Competition Model
 
 ### Simple Logistic Growth
 
@@ -132,7 +132,7 @@ a21 <- 0.9
 
 When you are simulating this model, you will probably need to increase the number of time steps in order to reach an equilibrium state. By varying the starting abundances of the species, you should be able to achieve cases where each species prevails.
 
-## Lotka-Volterra Predation Model
+## Exercise 2: Lotka-Volterra Predation Model
 
 First define the model describing changes in the abundance of both predators and prey, where N and P are the numbers of prey and predators, respectively, r is the intrinsic growth rate of the prey population, a is the attack rate of the predator on the prey, e is the conversion efficiency of energy during predation, and m is predator mortality:
 
