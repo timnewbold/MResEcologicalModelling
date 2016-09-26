@@ -6,4 +6,4 @@ Date: 2016-08-26
 Author: Tim Newbold
 Maintainer: Tim Newbold <t.newbold@ucl.ac.uk>
 Description: Tools and materials for Introduction to Ecological Modelling course
-Depends: lme4
+Depends: lme4, StatisticalModels
