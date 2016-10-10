@@ -4,12 +4,16 @@
 
 This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies. I assume experience of running basic statistical methods in R.
 
-## Getting Started in R
+Before you start you need to install a couple of R packages:
 
 ```R
 install.packages("devtools")
 library(devtools)
 
+install_github("timnewbold/StatisticalModels")
+install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
+
+library(MResModelling)
 ```
 
 ## Exercise 1: Metabolic Theory - Mixed-effects models
