@@ -7,9 +7,9 @@ This session will introduce some of the statistical approaches that are availabl
 Before you start you need to install a couple of R packages:
 
 ```R
+install.packages("lme4")
 install.packages("devtools")
 library(devtools)
-
 install_github("timnewbold/StatisticalModels")
 install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
 
