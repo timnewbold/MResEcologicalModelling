@@ -4,19 +4,104 @@
 
 This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies. I assume experience of running basic statistical methods in R.
 
-Before you start you need to install a couple of R packages:
+Before you start you need to install a few R packages:
 
 ```R
 install.packages("lme4")
+install.packages("emdbook")
+install.packages("bbmle")
 install.packages("devtools")
 library(devtools)
 install_github("timnewbold/StatisticalModels")
 install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
-
-library(MResModelling)
 ```
 
-## Exercise 1: Metabolic Theory - Mixed-effects models
+## Exercise 1: Functional responses - Maximum Likelihood Estimation
+
+In this exercise, we will use data on predator functional responses (i.e. relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
+
+```R
+library(emdbook)
+data(ReedfrogFuncresp)
+```
+
+First, let's plot the functional response to inspect the data:
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+```
+
+It looks as though there might be a linear relationship between these variables. So let's try fitting a simple linear model:
+
+```R
+m1 <- lm(Killed~Initial,data=ReedfrogFuncresp)
+
+m1
+# Coefficients:
+# (Intercept)      Initial  
+#       2.727        0.276
+
+summary(m1)
+# Coefficients:
+#             Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)  2.72651    1.96292   1.389    0.187    
+# Initial      0.27603    0.03948   6.991 6.33e-06 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 5.04 on 14 degrees of freedom
+# Multiple R-squared:  0.7773,    Adjusted R-squared:  0.7614 
+# F-statistic: 48.88 on 1 and 14 DF,  p-value: 6.334e-06
+```
+
+This linear model seems to fit the data very well. However, as you heard in the lecture today, and will hear much more about in the lecture tomorrow, there are different theoretical models describing functional responses. One of these (the Type II) functional response is a saturating function:
+
+N<sub>killed</sub> = (aN)/(1+aHN),
+
+where N is initial density, and a and H are the parameters 'attack rate' and 'handling time'.
+
+It is not easy to transform the variables to make a linear relationship from this model, and even if we did do this the parameters would be difficult to interpret. So instead we will fit the model using maximum likelihood estimation. First though, as an experiment, let's refit the linear model using maximum likelihood.
+
+```R
+# First we define the likelihood function
+linearNLL <- function(killed,init,m,c,sd){
+  
+  # The following line calculates the expected y values
+  # for a given slope and intercept
+  y.pred <- m * init + c
+  
+  # The next line calculates the likelihood for this model
+  # assuming that the residuals are a normal distribution
+  # around 0 (as in a linear regression)
+  suppressWarnings(-sum(dnorm(x = killed,mean = y.pred,sd = sd,log = TRUE)))
+  
+}
+
+# Now we run the maximum likelihood estimation
+m2 <- mle2(minuslogl = linearNLL,start = list(m=0.2,c=2,sd=1),
+           data = list(init=ReedfrogFuncresp$Initial,
+                       killed=ReedfrogFuncresp$Killed))
+
+m2
+# Coefficients:
+#         m         c        sd 
+# 0.2760248 2.7265615 4.7141473 
+```
+
+The parameters are of course very similar to those estimated by the linear regression. Before moving on to the more complex functional response model, let's plot the data and the fitted linear relationship:
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+
+# Create a data frame with values of initial density to predict
+preds <- data.frame(Initial=1:100)
+# Predict number of prey killed
+preds$Killed <- m2@coef['m']*preds$Initial+m2@coef['c']
+# Plot (type="l" plots a line, and lwd=2 makes the line thick)
+points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
+```
+
+## Exercise 2: Metabolic Theory - Mixed-effects models
 
 For this first section of this session, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Often there estimates for several individuals of a species, but sometimes only for one.
 
@@ -196,4 +281,5 @@ One thing to note from this exercise is that whichever model we used (even the s
 
 * Hudson, L.N., Isaac, N.B.J. & Reuman, D.C. (2013). The relationship between body mass and field metabolic rate among individual birds and mammals. <i> Journal of Animal Ecology</i> <b>82</b>: 1009-1020.
 * Nakagawa, S. & Schielzeth, H. (2013). A general and simple method for obtaining R<sup>2</sup> from generalized linear mixed-effects models. <i>Methods in Ecology & Evolution</i> <b>4</b>: 133-142.
+* Vonesh, J.R. & Bolker, B.M. (2005). Compensatory larval responses shift trade-offs associated with predator-induced hatching plasticity. <i>Ecology</i> <b>86</b>: 1580-1591.
 
