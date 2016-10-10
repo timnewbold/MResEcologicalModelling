@@ -4,6 +4,14 @@
 
 This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies. I assume experience of running basic statistical methods in R.
 
+## Getting Started in R
+
+```R
+install.packages("devtools")
+library(devtools)
+
+```
+
 ## Exercise 1: Metabolic Theory - Mixed-effects models
 
 For this first section of this session, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Often there estimates for several individuals of a species, but sometimes only for one.
