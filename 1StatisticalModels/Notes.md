@@ -63,6 +63,9 @@ where N is initial density, and a and H are the parameters 'attack rate' and 'ha
 It is not easy to transform the variables to make a linear relationship from this model, and even if we did do this the parameters would be difficult to interpret. So instead we will fit the model using maximum likelihood estimation. First though, as an experiment, let's refit the linear model using maximum likelihood.
 
 ```R
+# We need to load the bblme package
+library(bbmle)
+
 # First we define the likelihood function
 linearNLL <- function(killed,init,m,c,sd){
   
@@ -98,6 +101,55 @@ preds <- data.frame(Initial=1:100)
 # Predict number of prey killed
 preds$Killed <- m2@coef['m']*preds$Initial+m2@coef['c']
 # Plot (type="l" plots a line, and lwd=2 makes the line thick)
+points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
+```
+
+Now we will fit the more complex 'Type II' functional response model to the data.
+
+```R
+# As before, we first need to define the likelihood function
+binomLL <- function(killed,init,p){
+  
+  a = p[1]
+  h = p[2]
+  
+  pkilled <- a/(1+a*h*init)
+  
+  -sum(dbinom(x = killed,size = init,prob = pkilled,log = TRUE))
+  
+}
+parnames(binomLL) <- c("a","h")
+
+# Now run the likelihood estimation
+m3 <- mle2(minuslogl = binomLL,start = c(a=0.5,h=0.0125),
+           data = list(init=ReedfrogFuncresp$Initial,
+                       killed=ReedfrogFuncresp$Killed))
+
+m3
+# Coefficients:
+#          a          h 
+# 0.52630319 0.01664362 
+# 
+# Log-likelihood: -46.72
+```
+
+If we compare the AIC values of these models, we can see that the Type II functional response is a slightly better fit to the data (i.e. has a lower AIC value):
+```R
+AIC(m2,m3)
+#         AIC df
+# 1 101.02429  3
+# 2  97.44279  2
+```
+
+Finally, we will plot the fitted Type II functional response. Note that the model as defined above predicts the probability that a single prey individual is eaten, so we need to multiply by initial prey density to get the estimate of the total number of prey eaten.
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+
+preds <- data.frame(Initial=1:100)
+preds$Killed <- preds$Initial *
+	m3@coef['a']/(1 + m3@coef['a'] * 
+		m3@coef['h'] * preds$Initial)
 points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
 ```
 
