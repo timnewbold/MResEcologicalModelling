@@ -8,7 +8,7 @@ First, let's simulate simple logistic growth. Remember from the <a href="https:/
 
 dN/dt = rN((K-N)/K)
 
-To solve this in R, we will use the deSolve package:
+To simulate this in R, we will use the deSolve package to solve an ordinary differential equation:
 
 ```R
 install.packages("deSolve")
@@ -170,71 +170,158 @@ with(data.frame(outLVP),{
 
 Now try varying some of the parameters to explore the behaviour of the model.
 
-## Rosenzweig-MacArthur predation and competition model
+## Exercise 3: Lotka-Volterra Competition Model With Stochasticity and Dispersal
 
-The Lotka-Volterra predator-prey model assumes that, in the absence of predators, prey populations grow exponentially. However, competition among species mean that this is unrealistic. The Rosenzweig-MacArthur model includes both competitive and consumption effects of species on each other.
+Stochastic events and dispersal can be important in shaping the outcomes of interactions among species. We can include these processes into our simple theoretical models.
 
-We will use the version of the Rosenzweig-MacArthur model as implemented in Saterberg et al. (2013).
+Let's start with the generalized form of the Lotka-Volterra competition model (based on exponential growth): dN/dt = rN - N&#931;&#945;N.
 
-We will simulate a simple system with 10 species: 5 primary producers, 3 primary consumers (e.g. herbivores) and 2 secondary consumers (e.g. carnivores). We will assume that two of the primary consumers are specialists and one is a generalist, and that one of the consumers is a specialist and one is a generalist.
+We will switch to using a simulation-based approach, rather than ordinary differential equations so that we can incorporate the stochastic effects, i.e.: N<sub>t</sub> = N<sub>t-1</sub> + rN<sub>t-1</sub> - N<sub>t-1</sub>&#931;&#945;N<sub>t-1</sub>.
 
-```
-rmModel <- function(time,state,pars){
-  dN <- numeric(length(state))
-  for (s in 1:length(state)){
-    dN[s] <- pars$r[s] * state[s] - 
-      state[s] * sum(pars$alpha.comp[s,1:length(state)] * state) - 
-      state[s]^2 * sum((pars$pref[s,1:length(state)] * pars$a * state)/
-                         (1+pars$T * sum(pars$pref[s,1:length(state)] * pars$a * state)))
+```R
+# We will simulate the dynamics of populations in two grid cells (represented by the matrices state1 and state2)
+# Within each cell, we simulate 4 species
+state1 <- matrix(nrow=length(times),ncol=4)
+state1[1,] <- 1
+
+state2 <- matrix(nrow=length(times),ncol=4)
+state2[1,] <- 1
+
+# We will run the model for 50,000 time steps
+times <- 0:50000
+
+# Set the parameter for intrinsic growth rate (assumed to be the same for all species)
+pars <- list(r=0.001)
+
+# Now create parameters for the competition coefficients
+pars$alpha <- matrix(0,nrow=4,ncol=4)
+# Intraspecific competition (on the diagonal of the competition coefficients matrix)
+# will be equal for all species
+diag(pars$alpha) <- 1e-5
+# Start with equal interspecific competition for all species, weaker than intraspecific competition
+pars$alpha[lower.tri(pars$alpha)] <- 1e-7
+pars$alpha[upper.tri(pars$alpha)] <- 1e-7
+# Finally, make species 4 a superior competitor (i.e. having a stronger interspecific effect on 
+# the other species
+pars$alpha[1:3,4] <- 1e-5
+
+# Now, run the model
+for (t in 2:length(times)){
+  for (s in 1:dim(state1)[2]){
+    state1[t,s] <- state1[(t-1),s] + pars$r * state1[(t-1),s] - state1[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state1)[2]] * state1[(t-1),])
+    state2[t,s] <- state2[(t-1),s] + pars$r * state2[(t-1),s] - state2[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state2)[2]] * state2[(t-1),])
   }
-  list(dN)
+  
 }
 
-# Start the 5 species with abundances that decline with trophic level
-state <- c(rep(1000,5),rep(500,3),rep(100,2))
-# Let's assume that all resource species have the same intrinsic rate of population growth
-# and all consumers have the same mortality rate
-pars <- list(r=c(rep(0.01,5),rep(-0.01,3),rep(-1e-3,2)))
+```
 
-pars$a <- 1.5
-pars$T <- 0.2
+Plotting this model shows that species 4 outcompetes the other 3 species:
 
-# Now, create a matrix of 0s to hold competition coefficients
-pars$alpha.comp <- matrix(0,nrow=10,ncol=10)
+```R
+# First specify a 2-by-2 grid of plots
+par(mfrow=c(2,2))
 
-# Intraspecific competition among producers is set to 1, 
-# and among consumers to 0.01
-diag(pars$alpha.comp) <- c(rep(1e-5,5),rep(1e-6,5))
-
-# Interspecific competition among prodcuers is set to 0.5
-# (consumers are assumed not to show direct interspecific compeitition,
-# but to compete only through shared resources)
-pars$alpha.comp[1:5,1:5][lower.tri(pars$alpha.comp[1:5,1:5])]<-5e-7
-pars$alpha.comp[1:5,1:5][upper.tri(pars$alpha.comp[1:5,1:5])]<-5e-7
-
-# Create a matrix of 0s to hold consumer preferences
-pars$pref <- matrix(0,nrow=10,ncol=10)
-
-# Let's assume that the first primary consumer has a strong preference for one
-# of the producer species
-pars$pref[1:5,6] <- c(0.9,0.025,0.025,0.025,0.025)
-# The second primary consumer specializes equally on two producer species
-pars$pref[1:5,7] <- c(0.1,0.35,0.35,0.1,0.1)
-# The other primary consumer species is a generalist
-pars$pref[1:5,8] <- rep(0.2,5)
-
-# Let's assume that one secondary consumer specializes on one of the primary consumers
-pars$pref[6:8,9] <- c(0.9,0.05,0.05)
-# The other secondary consumer is a generalist
-pars$pref[6:8,10] <- c(1/3,1/3,1/3)
-
-times <- seq(from=0,to=1000,by=1)
-outRM <- ode(state,times,rmModel,pars)	
+# Now plot the population dynamics for each species (we will plot the results for just one cell)
+for (sp in 1:4){
+	plot(state1[,sp],type="l",main=paste("Species ",sp,sep=""),xlab="Time",ylab="N",ylim=c(0,100))
+}
 
 ```
 
-## References
+Now we will introduce some stochasticity into the model, by assuming that a disturbance process occurs in each cell separately, in each time step, with a probability of 0.001. In the event of disturbance, the abundance of all species is reduced by 50%.
 
-Saterberg, T., Sellman, S. & Ebenman, B. (2013). High frequency of functional extinctions in ecological networks. <i>Nature</i> <b>499</b>: 468-470.
+```R
+# Re-run the model, but this time adding a random probability of disturbance for each cell, 
+# and reducing abundance by 50% in the event of disturbance
+for (t in 2:length(times)){
+  for (s in 1:dim(state1)[2]){
+    state1[t,s] <- state1[(t-1),s] + pars$r * state1[(t-1),s] - state1[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state1)[2]] * state1[(t-1),])
+    state2[t,s] <- state2[(t-1),s] + pars$r * state2[(t-1),s] - state2[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state2)[2]] * state2[(t-1),])
+  }
+  
+  # runif(1) draws a single number at random from a uniform distribution between 0 and 1
+  # It is useful for simulating processes that have a certain probability of occurring
+  if (runif(1)<0.001){
+    state1[t,] <- state1[t,]*0.5
+  }
+  if (runif(1)<0.001){
+    state2[t,] <- state2[t,]*0.5
+  }
+  
+}
 
+```
 
+Plotting this model shows less dominance by species 4 (the other species persist this time), although it still achieves greater abundance than the other species:
+
+```R
+par(mfrow=c(2,2))
+
+for (sp in 1:4){
+    plot(state1[,sp],type="l",main=paste("Species ",sp,sep=""),xlab="Time",ylab="N",ylim=c(0,100))
+}
+
+```
+
+Now we will introduce dispersal.
+
+```R
+# First, we need a new set of parameters to describe dispersal rates
+# We will assume a competition-colonization trade-off (i.e. that species 4 has a lower dispersal rate)
+pars$d <- c(0.05,0.05,0.05,0.00001)
+
+# Now re-run the model, but with dispersal of individuals between the two cells
+for (t in 2:length(times)){
+  for (s in 1:dim(state1)[2]){
+    state1[t,s] <- state1[(t-1),s] + pars$r * state1[(t-1),s] - state1[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state1)[2]] * state1[(t-1),])
+    state2[t,s] <- state2[(t-1),s] + pars$r * state2[(t-1),s] - state2[(t-1),s] * 
+      sum(pars$alpha[s,1:dim(state2)[2]] * state2[(t-1),])
+
+	# First calculate the number of individuals that will emigrate from each cell
+    cell1.emig <- pars$d[s] * state1[t,s]
+    cell2.emig <- pars$d[s] * state2[t,s]
+    
+	# Now move the emigrating individuals between cells
+    state1[t,s] <- state1[t,s] - cell1.emig
+    state1[t,s] <- state1[t,s] + cell2.emig
+    
+    state2[t,s] <- state2[t,s] - cell2.emig
+    state2[t,s] <- state2[t,s] + cell1.emig
+
+  }
+  
+  # runif(1) draws a single number at random from a uniform distribution between 0 and 1
+  # It is useful for simulating processes that have a certain probability of occurring
+  if (runif(1)<0.001){
+    state1[t,] <- state1[t,]*0.5
+  }
+  if (runif(1)<0.001){
+    state2[t,] <- state2[t,]*0.5
+  }
+  
+}
+
+```
+
+Plotting the results from this model shows that species 4 is much less dominant, and species 1 to 3 maintain abundances that are nearly has high as species 4's abundance.
+
+```R
+par(mfrow=c(2,2))
+
+for (sp in 1:4){
+    plot(state1[,sp],type="l",main=paste("Species ",sp,sep=""),xlab="Time",ylab="N",ylim=c(0,100))
+}
+
+```
+
+There are much more sophisticated and better models than this for simulating the effects of stochasticity and dispersal, but hopefully this has illustrated the effects that these processes can have and the approach that one might take to incorporate them into simple ecological models.
+
+## Additional Work
+
+This is the end of the main exercises for the session. If you have reached this point with time to spare, you could try writing your own model. Or go back over the models from the exercises and explore the behaviour of the models under different conditions. You could try incorporating the effects of environmental change in your models, for example. If you need ideas, come and talk to me!
