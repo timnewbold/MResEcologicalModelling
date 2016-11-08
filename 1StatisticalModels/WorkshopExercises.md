@@ -498,9 +498,43 @@ model3$summary
 
 You can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to anything but confirm prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
 
+## Exercise 4: Land use impacts on biodiversity - Mixed-effects models
+
+In this exercise, we will use the PREDICTS data (discussed in the lecture) to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations, in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
+
+Each of these studies was conducted in a different geographical location, with different sampling protocols, and with different levels of sampling effort. It would be inappropriate to construct a simple linear model that ignores this hierarchical structure. Therefore, we will be using mixed-effects models.
+
+First, load my StatisticalModels package, and read in the site-level data from Newbold et al. (2016):
+
+```R
+library(StatisticalModels)
+data(PREDICTSSiteData)
+```
+
+Now, we will reorder the land uses into a somewhat intuitive order (by default they are ordered alphabetically, but it makes sense at least to have natural habitats - primary and secondary vegetation - first, and we will put urban last because it reasonable to expect this land use to have the lowest biodiversity).
+
+```R
+PREDICTSSites$LandUse <- factor(PREDICTSSites$LandUse,
+                                levels=c("Primary Vegetation","Secondary Vegetation",
+                                         "Plantation forest","Cropland","Pasture","Urban"))
+```
+
+In this exercise, we will switch to using some functions I have written for easily creating mixed-effects models.
+
+When we fitted mixed-effects models in Exercise 2 above, we used a very simple random-effects structure including only the study from which the data were taken. We certainly want to include study in these models too (in this dataset, study identity designated as 'SS'):
+
+```R
+random1 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = "gaussian",
+                 fixedStruct = "LandUse",randomStruct = "(1|SS)")
+```
+
+However, in the PREDICTS data there is also sometimes spatial structuring of sites within studies (for example, if the authors of the original papers sampled sites arranged in spatial blocks within a landscape). Therefore, we might also consider a term to account for this structuring (there is one in the PREDICTS data: 'SSB').
+
 ## References
 
 * Hudson, L.N., Isaac, N.B.J. & Reuman, D.C. (2013). The relationship between body mass and field metabolic rate among individual birds and mammals. <i> Journal of Animal Ecology</i> <b>82</b>: 1009-1020.
+* Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Senior, R.A., Bedford, F., Bennett, D., Booth, H., Choimes, S., Laginha Correia Pinto, D., Day, J., Echeverría-Londoño, S., Garon, M., Harrison, M.L.K., Ingram, D.I., Jung, M., Kemp, V., Kirkpatrick, L., Martin, C., Pan, Y., Robinson, A., White, H., [hundreds of data contributors], Collen, B., Ewers, R.M., Mace, G.M., Purves, D.W., Scharlemann, J.P.W. & Purvis, A. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. <i>Ecology & Evolution</i> <b>4</b>: 4701–4735.
 * Nakagawa, S. & Schielzeth, H. (2013). A general and simple method for obtaining R<sup>2</sup> from generalized linear mixed-effects models. <i>Methods in Ecology & Evolution</i> <b>4</b>: 133-142.
+* Newbold, T., Hudson, L.N., Arnell, A.P., Contu, S., De Palma, A., Ferrier, S., Hill, S.L.L., Hoskins, A.J., Lysenko, I., Phillips, H.R.P., Burton, V.J., Chng, C.W.T., Emerson, S., Gao, D., Pask-Hale, G., Hutton, J., Jung, M., Sanchez-Ortiz, K., Simmons, B.I., Whitmee, S., Zhang, H., Scharlemann, J.P.W. & Purvis, A. (2016). Has land use pushed terrestrial biodiversity beyond the planetary boundary? A global assessment. <i>Science</i> <b>353</b>: 288-291.
 * Vonesh, J.R. & Bolker, B.M. (2005). Compensatory larval responses shift trade-offs associated with predator-induced hatching plasticity. <i>Ecology</i> <b>86</b>: 1580-1591.
 
