@@ -8,6 +8,7 @@ Before you start you need to install a few R packages:
 
 ```R
 install.packages("lme4")
+install.packages("arm")
 install.packages("emdbook")
 install.packages("bbmle")
 install.packages("R2WinBUGS")
