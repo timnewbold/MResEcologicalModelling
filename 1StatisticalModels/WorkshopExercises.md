@@ -500,7 +500,7 @@ You can hopefully see the dangers of using overly influential priors. Specifying
 
 ## Exercise 4: Land use impacts on biodiversity - Mixed-effects models
 
-In this exercise, we will use the PREDICTS data (discussed in the lecture) to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations, in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
+In this exercise, we will use the PREDICTS data (discussed in the lecture) to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations ('sites'), in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
 
 Each of these studies was conducted in a different geographical location, with different sampling protocols, and with different levels of sampling effort. It would be inappropriate to construct a simple linear model that ignores this hierarchical structure. Therefore, we will be using mixed-effects models.
 
@@ -593,7 +593,49 @@ abundModelSelect$stats
 # 5 poly(logDistRd.rs,1) 5.733462e-03 1 , 12 9.396422e-01  -1.994267
 ```
 
-We can plot an error bar showing the results of the final model using the PlotGLMERFactor in my StatisticalModels package. Continuous effects can be included by plotting them at the lowest, median and highest values seen in the original data.
+We can plot an error bar showing the land-use effects from the final model using the PlotGLMERFactor in my StatisticalModels package:
+
+```R
+PlotGLMERFactor(model = abundModelSelect$model,data = abundModelSelect$data,
+                responseVar = "Abundance",logLink = "e",catEffects = "LandUse",
+                xtext.srt = 45)
+```
+
+The catEffects parameter specifies which factor(s) in the model to plot. The logLink="e" causes the response variable to be back-transformed from log<sub>e</sub> abundance to raw total abundance. The xtext.srt just rotates the x-axis labels by 45 degrees.
+
+And we can plot the effect of human population density using PlotGLMERContinuous:
+
+```R
+PlotGLMERContinuous(model = abundModelSelect$model,data = abundModelSelect$data,
+                    effects = "logHPD.rs",otherFactors = list(LandUse="Primary Vegetation"),
+                    xlab = "(Log) Human population density (rescaled)",ylab = "Total abundance",
+                    logLink = "e")
+```
+
+We have to specify all of the terms (factors and continuous effects) that were in the model to allow the function to plot. The 'otherFactors = list(LandUse="Primary Vegetation")' term specifies that we will plot predicted values for primary vegetation.
+
+Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Commonly, observed species richness values have a variance that is greater than the mean, a situation known as over-dispersion.
+
+There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset. In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
+
+But before we get onto this, let's compare the study-only and study-plus-spatial-block random-effects structures that we considered for the models of total abundance. You will probably receive warnings about model convergence, but these aren't too serious.
+
+```R
+randomR1 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
+                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
+                 randomStruct = "(1|SS)",REML = FALSE)
+randomR2 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
+                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
+                 randomStruct = "(1|SS)+(1|SSB)",REML = FALSE)
+
+AIC(randomR1$model,randomR2$model)
+#                df      AIC
+# randomR1$model 11 102591.5
+# randomR2$model 12 100695.0
+```
+
+As with the models of total abundance, the random-effects structure that includes the effect of the spatial structure of sites is strongly favoured.
+
 
 ## References
 
