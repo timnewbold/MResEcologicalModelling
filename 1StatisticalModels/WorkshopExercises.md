@@ -295,7 +295,7 @@ AIC(model2,model3)
 # model3  6 -1828.272
 ```
 
-The data contain estimates for multiple species, often with multiple estimates for a single species. Metabolic rates might differ among species, which could influence our ability to detect the relationship between body mass and metabolic rate. So let's fit a model with a random intercept for species (note we have dropped the random slope here because there are insufficient data to create a reliable model that includes both random intercepts and the random slope term):
+The data contain estimates for multiple species, often with multiple estimates for a single species. Metabolic rates might differ among species, which could influence our ability to detect the relationship between body mass and metabolic rate. So let's fit a model with a random intercept for species as well as for study identity (note we have dropped the random slope here because there are insufficient data to create a reliable model that includes both random intercepts and the random slope term):
 
 ```R
 # First create a column holding the species binomial
@@ -519,16 +519,81 @@ PREDICTSSites$LandUse <- factor(PREDICTSSites$LandUse,
                                          "Plantation forest","Cropland","Pasture","Urban"))
 ```
 
+The other variables that we will consider are human population density and distance to nearest road. The imported data table already contains log-transformed versions of these variables, rescaled to have values between 0 and 1: logHPD.rs and logDistRd.rs, respectively.
+
 In this exercise, we will switch to using some functions I have written for easily creating mixed-effects models.
 
-When we fitted mixed-effects models in Exercise 2 above, we used a very simple random-effects structure including only the study from which the data were taken. We certainly want to include study in these models too (in this dataset, study identity designated as 'SS'):
+When we fitted mixed-effects models in Exercise 2 above, we used a very simple random-effects structure including only the study from which the data were taken. We certainly want to include study in these models too, because we expect sampled biodiversity to vary considerably among studies owing to differences in sampling methods and sampling effort (in this dataset, study identity designated as 'SS'):
 
 ```R
 random1 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = "gaussian",
-                 fixedStruct = "LandUse",randomStruct = "(1|SS)")
+                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
+                 randomStruct = "(1|SS)")
 ```
 
-However, in the PREDICTS data there is also sometimes spatial structuring of sites within studies (for example, if the authors of the original papers sampled sites arranged in spatial blocks within a landscape). Therefore, we might also consider a term to account for this structuring (there is one in the PREDICTS data: 'SSB').
+Note that we have included land use, and also quadratic polynomial terms for both human population density and distance to nearest road. It is customary to compare different random-effects structures before comparing models with different fixed effects, and to use the most complex combination of fixed effects that will be considered in doing so.
+ 
+In the PREDICTS data there is also sometimes spatial structuring of sites within studies (for example, if the authors of the original papers sampled sites arranged in spatial blocks within a landscape). Therefore, we might also consider a term to account for this structuring (there is one in the PREDICTS data: 'SSB').
+
+If two factors that you want to include are overlapping then they are referred to as 'crossed'. For example, in the analysis of metabolic rates in Exercise 2, a species could be sampled in multiple studies. 
+
+An alternative structure to the data is to have nested random effects. The case of spatial blocks within studies in the PREDICTS data is an example - a particular spatial block can only belong to one study. In this case, there are two ways to fit the random-effects structure. Sometimes the factors are specified in a way that doesn't account for their nestedness. For example, if there were 4 spatial blocks numbered 1 to 4 in one study, and 5 spatial blocks numbered 1 to 5 in a second study. In this case, the model has no way to know that block 1 in study 1 shouldn't be treated as being the same as block 1 in study 2. The hierarchical nature of the random effect must then be specified in the model as follows: (1|SS/SSB). Alternatively the hierarchical structure can be accounted for in the specification of the variables, for example by naming the spatial blocks 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, and 2.5, where the first number indicates the identity of the study. In this case, the random effects can be specified either in the nested fashion (1|SS/SSB) or in the same way as crossed random effects (1|SS)+(1|SSB). This latter approach is easier to work with and is the way we will use with the PREDICTS data (where the nested random effects were specified in the data).
+
+```R
+random2 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = "gaussian",
+                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
+                 randomStruct = "(1|SS)+(1|SSB)")
+```
+
+If we compare the AIC values of these two models, we can see that the one including the effect of spatial structure of sites within studies is strongly supported over the one that includes only variation among studies:
+
+```R
+AIC(random1$model,random2$model)
+#               df      AIC
+# random1$model 12 34327.07
+# random2$model 13 33758.41
+```
+
+If you look at the model output, you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
+
+
+```R
+random2$model
+# Linear mixed model fit by REML ['lmerMod']
+# Formula: LogAbund ~ LandUse + poly(logHPD.rs, 2) + poly(logDistRd.rs,  
+#     2) + (1 | SS) + (1 | SSB)
+#    Data: modelData
+# REML criterion at convergence: 33732.41
+# Random effects:
+#  Groups   Name        Std.Dev.
+#  SSB      (Intercept) 0.4410  
+#  SS       (Intercept) 2.1926  
+#  Residual             0.7766  
+# Number of obs: 13197, groups:  SSB, 1531; SS, 428
+```
+
+Now we have identified our random-effects structure, we can select a combination of fixed effects that adeuqately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My ModelSelect function in the StatisticalModels package does this for you. The call for this function separates categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
+
+```R
+abundModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "LogAbund",
+                                fitFamily = "gaussian",fixedFactors = "LandUse",
+                                fixedTerms = list(logHPD.rs=2,logDistRd.rs=2),
+                                randomStruct = "(1|SS)+(1|SSB)",verbose = TRUE)
+```
+
+If you look at the output that was printed to screen, you will see that the effect of distance to nearest road was first simplified to a linear effect, and then dropped altogether, whereas the effect of human population density was retained as a quadratic polynomial. The effect of land use was retained. Viewing the table of statistics that is output by the function shows the same things (the row for the linear effect of human population density is blank because the quadratic effect was better):
+
+```R
+abundModelSelect$stats
+#                  terms        ChiSq     Df            P       dAIC
+# 1              LandUse 1.113244e+02 5 , 11 2.150654e-22 101.324389
+# 2    poly(logHPD.rs,2) 2.586414e+01 1 , 11 3.663110e-07  23.864142
+# 3 poly(logDistRd.rs,2) 9.262984e-01 1 , 13 3.358266e-01  -1.073702
+# 4    poly(logHPD.rs,1)           NA   <NA>           NA         NA
+# 5 poly(logDistRd.rs,1) 5.733462e-03 1 , 12 9.396422e-01  -1.994267
+```
+
+We can plot an error bar showing the results of the final model using the PlotGLMERFactor in my StatisticalModels package. Continuous effects can be included by plotting them at the lowest, median and highest values seen in the original data.
 
 ## References
 
