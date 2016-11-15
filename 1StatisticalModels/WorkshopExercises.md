@@ -614,9 +614,9 @@ PlotGLMERContinuous(model = abundModelSelect$model,data = abundModelSelect$data,
 
 We have to specify all of the terms (factors and continuous effects) that were in the model to allow the function to plot. The 'otherFactors = list(LandUse="Primary Vegetation")' term specifies that we will plot predicted values for primary vegetation.
 
-Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Commonly, observed species richness values have a variance that is greater than the mean, a situation known as over-dispersion.
+Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Observed species richness values commonly have a variance greater than the mean, a situation known as over-dispersion.
 
-There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset. In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
+There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
 
 But before we get onto this, let's compare the study-only and study-plus-spatial-block random-effects structures that we considered for the models of total abundance. You will probably receive warnings about model convergence, but these aren't too serious.
 
@@ -636,6 +636,95 @@ AIC(randomR1$model,randomR2$model)
 
 As with the models of total abundance, the random-effects structure that includes the effect of the spatial structure of sites is strongly favoured.
 
+One way to test for over-dispersion is to compare the residual deviance to the residual degrees of freedom of a model. If the deviance is much larger than the degrees of freedom, this is an indication of over-dispersion (there other possible reasons though). There is a function in the StatisticalModels package that does this:
+
+```R
+GLMEROverdispersion(model = randomR2$model)
+# $residDev
+# [1] 31852.27
+# 
+# $residDF
+# [1] 15621
+# 
+# $ratio
+# [1] 2.039068
+# 
+# $P.ChiSq
+# [1] 0
+```
+
+The large ratio of residual deviance to residual degrees of freedom indicates the presence of over-dispersion (confirmed by the significant chi-square test). Therefore, we will try a random-effects structure with a nested effect of site, within spatial block, within study (warning, this will take a little time to run!):
+
+```R
+randomR3 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
+                  fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
+                  randomStruct = "(1|SS)+(1|SSB)+(1|SSBS)",REML = FALSE)
+
+AIC(randomR2$model,randomR3$model)
+#                df       AIC
+# randomR2$model 12 100695.04
+# randomR3$model 13  92211.73
+```
+
+The comparison of AIC values suggests that the random-effects structure including site is strongly favoured, and re-running the over-dispersion test shows that including an observation-level random effect has removed the over-dispersion (in fact, there is now under-dispersion):
+
+```R
+GLMEROverdispersion(model = randomR3$model)
+# $residDev
+# [1] 7448.711
+# 
+# $residDF
+# [1] 15620
+# 
+# $ratio
+# [1] 0.4768701
+# 
+# $P.ChiSq
+# [1] 1
+```
+
+Now we have selected a random-effects structure for our species richness model, we can perform backward stepwise model selection:
+
+```R
+richModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "Species_richness",
+                               fitFamily = "poisson",fixedFactors = "LandUse",
+                               fixedTerms = list(logHPD.rs=2,logDistRd.rs=2),
+                               randomStruct = "(1|SS)+(1|SSB)+(1|SSBS)",verbose = TRUE)
+```
+
+Looking at the statistics table from this model-selection routine, we can see that the quadratic polynomial for the effect of distance to nearest road was simplified to a linear effect, but that otherwise all terms were retained:
+
+```R
+richModelSelect$stats
+#                  terms      ChiSq     Df            P        dAIC
+# 1              LandUse 421.821312 5 , 12 5.864926e-89 411.8213121
+# 2    poly(logHPD.rs,2)  24.853597 1 , 12 6.185353e-07  22.8535968
+# 3 poly(logDistRd.rs,2)   1.190132 1 , 13 2.753029e-01  -0.8098678
+# 4    poly(logHPD.rs,1)         NA   <NA>           NA          NA
+# 5 poly(logDistRd.rs,1)   5.042986 1 , 12 2.472584e-02   3.0429855
+```
+
+Plotting the model shows the effects of land use, human population density and distance to nearest road:
+
+```R
+PlotGLMERFactor(model = richModelSelect$model,data = richModelSelect$data,
+                responseVar = "Species richness",logLink = "e",catEffects = "LandUse",
+                xtext.srt = 45)
+
+PlotGLMERContinuous(model = richModelSelect$model,data = richModelSelect$data,
+                    effects = c("logHPD.rs"),otherContEffects = c("logDistRd.rs"),
+                    otherFactors = list(LandUse="Primary Vegetation"),
+                    xlab = "(Log) Human population density (rescaled)",
+                    ylab = "Species richness",logLink = "e")
+
+PlotGLMERContinuous(model = richModelSelect$model,data = richModelSelect$data,
+                    effects = c("logDistRd.rs"),otherContEffects = c("logHPD.rs"),
+                    otherFactors = list(LandUse="Primary Vegetation"),
+                    xlab = "(Log) Distance to road (rescaled)",
+                    ylab = "Species richness",logLink = "e")
+```
+
+If you have time, you could consider experimenting with your own models. Perhaps you could include the effects of land-use intensity, or consider interactions among the explanatory variables. Let me know if you need a hand trying these things.
 
 ## References
 
@@ -643,5 +732,6 @@ As with the models of total abundance, the random-effects structure that include
 * Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Senior, R.A., Bedford, F., Bennett, D., Booth, H., Choimes, S., Laginha Correia Pinto, D., Day, J., Echeverría-Londoño, S., Garon, M., Harrison, M.L.K., Ingram, D.I., Jung, M., Kemp, V., Kirkpatrick, L., Martin, C., Pan, Y., Robinson, A., White, H., [hundreds of data contributors], Collen, B., Ewers, R.M., Mace, G.M., Purves, D.W., Scharlemann, J.P.W. & Purvis, A. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. <i>Ecology & Evolution</i> <b>4</b>: 4701–4735.
 * Nakagawa, S. & Schielzeth, H. (2013). A general and simple method for obtaining R<sup>2</sup> from generalized linear mixed-effects models. <i>Methods in Ecology & Evolution</i> <b>4</b>: 133-142.
 * Newbold, T., Hudson, L.N., Arnell, A.P., Contu, S., De Palma, A., Ferrier, S., Hill, S.L.L., Hoskins, A.J., Lysenko, I., Phillips, H.R.P., Burton, V.J., Chng, C.W.T., Emerson, S., Gao, D., Pask-Hale, G., Hutton, J., Jung, M., Sanchez-Ortiz, K., Simmons, B.I., Whitmee, S., Zhang, H., Scharlemann, J.P.W. & Purvis, A. (2016). Has land use pushed terrestrial biodiversity beyond the planetary boundary? A global assessment. <i>Science</i> <b>353</b>: 288-291.
+* Rigby, R.A., Stasinopoulos, D.M. & Akantziliotou, C. (2008). A framework for modelling overdispersed count data, including the Poisson-shifted generalized inverse Gaussian distribution. <i>Computational Statistics & Data Analysis</i> <b>53</b>: 381-393.
 * Vonesh, J.R. & Bolker, B.M. (2005). Compensatory larval responses shift trade-offs associated with predator-induced hatching plasticity. <i>Ecology</i> <b>86</b>: 1580-1591.
 
