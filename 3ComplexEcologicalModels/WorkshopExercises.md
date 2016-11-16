@@ -64,7 +64,7 @@ init <- MadingleyInitialisation(duration = 50,
 params <- MadingleyParameters()
 ```
 
-The duration=50 parameter means that the model will run for 50 years, and the specific_locations parameter defines the latitude and longitude of the location we wish to simulate. The empty call to MadingleyParameters means that default values for all of the parameters will be used (see <a href="https://github.com/timnewbold/MadingleyR/blob/master/EcologicalParameters.md">here</a> for the definitions and default values of the parameters).
+The duration=50 parameter means that the model will run for 50 years, and the specific_locations parameter defines the latitude and longitude of the location we wish to simulate. The empty call to MadingleyParameters means that default values for all of the parameters will be used (see <a href="https://github.com/timnewbold/MadingleyR/blob/master/EcologicalParameters.md">here</a> for the definitions and default values of the parameters, as described in Harfoot et al., 2014).
 
 Having initialized the model, we can now run the specified simulation:
 
@@ -74,7 +74,54 @@ madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params)
 
 Finally, we can plot the results of this simulation:
 
+```R
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
+```
+
+You can see that plants (shown by the dark green line) have a higher biomass density than herbivores (light green), omnivores (purple) or carnivores (red), which is expected. But the estimated biomasses from a single simulation of a model as complex as the Madingley Model can be quite variable. Therefore, it is better to run multiple simulations, and then to calculate average estimated biomasses and confidence limits.
+
+To do this we need to re-initialize the Madingley Model, specifying that the simulations be run in parallel (to make the most of all of the cores in your computer).
+
+```R
+init <- MadingleyInitialisation(duration = 50,parallel_simulations = "yes",
+                                specific_locations = list(latitudes=2,longitudes=33))
+```
+
+Now when we run the model, we specify numSims=5 to tell the model to run 5 replicate simulations.
+
+```R
+madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,numSims = 5)
+```
+When we plot the model this time, we will specify plotConfidence=TRUE to show the variation in estimated biomasses around the mean:
+
+```R
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity",
+             plotConfidence = TRUE)
+```
+
+Now, let's try running a simulation for two different locations (the original cell in Uganda and a cell with much drier climatic conditions in northern Algeria), and compare the results. We will switch back to running just a single simulation in the interests of time, but you could try running an ensemble of simulations later if you are interested.
+
+```R
+init <- MadingleyInitialisation(duration = 50,parallel_cells = "yes",
+                                specific_locations = list(latitudes=c(2,35),longitudes=c(33,1)))
+madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params)
+```
+
+You can plot a map of the cells simulated using the following command:
+
+```R
+PlotCells(resultsDir = madingleySim$outputDir,map = "Africa")
+```
+
+Finally, plot the time series of estimated biomasses as before.
+
+```R
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
+```
+
+You will see that this ecosystem is estimated to have lower biomasses overall, especially of carnivores (the relatively low abundance of carnivores in ecosystems with low plant biomass matches theoretical expectations - see e.g. Post, 2004).
 
 ## References
 
 * Harfoot, M.B.J., Newbold, T., Tittensor, D.P., Emmott, S., Hutton, J., Lyutsarev, V., Smith, M.J., Scharlemann, J.P.W. & Purves, D.W. (2014). Emergent global patterns of ecosystem structure and function from a mechanistic general ecosystem model. <i>PLoS Biology</i> <b>12</b>: e1001841.
+* Post, D.M. (2004). The long and short of food-chain length. <i>Trends in Ecology & Evolution</i> <b>17</b>: 269-277.
