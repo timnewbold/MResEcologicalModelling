@@ -72,7 +72,7 @@ Having initialized the model, we can now run the specified simulation:
 madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params)
 ```
 
-Finally, we can plot the results of this simulation:
+Finally, we can plot the time series of simulated biomass densities across the whole duration of this simulation:
 
 ```R
 PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
@@ -98,6 +98,14 @@ When we plot the model this time, we will specify plotConfidence=TRUE to show th
 PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity",
              plotConfidence = TRUE)
 ```
+
+As well as plotting the simulated biomass densities across the whole length of the simulation, we can also plot properties of the ecosystem at the end of the simulation. Useful properties of the ecosystem include the relative biomasses of different trophic levels, which can be plotted as a biomass pyramid, or the relationship between the body mass of organisms and their abundance density (empirical evidence leads us to expect a negative power-law relationship between mass and density). There are functions for making both of these figures in MadingleyPlots (PlotPyramids and PlotMassDensity). We can plot a biomass pyramid from the simulation we just ran:
+
+```R
+PlotPyramids(resultsDir = madingleySim$outputDir,plotName = "BiomassPyramids")
+``` 
+
+Plotting the relationship between body mass and abundance density requires running the Madingley Model with a high level of output detail. This makes the simulations rather slow, so we won't do this right now, but if you want to try running this later, you just need to add output_detail="high" to the call to the MadingleyInitialisation function.
 
 Now, let's try running a simulation for two different locations (the original cell in Uganda and a cell with much drier climatic conditions in northern Algeria), and compare the results. We will switch back to running just a single simulation in the interests of time, but you could try running an ensemble of simulations later if you are interested.
 
