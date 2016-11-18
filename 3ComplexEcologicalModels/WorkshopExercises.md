@@ -1,6 +1,8 @@
 # Session 3: Complex Ecological Models
 
-This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Using the MadingleyR R package, you will download the model, run and plot basic simulations of the model, try altering the parameters of the model, and run scenarios of human impacts in the model.
+This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Of course, as you saw in the <a href="">lecture</a>, there are lots of other complex systems-level ecological models that could be used. But I know the details of the Madingley Model! 
+
+Using the MadingleyR R package, you will download the model, run and plot basic simulations of the model, try altering the parameters of the model, and run scenarios of human impacts in the model.
 
 ## Setting up the model
 
@@ -148,6 +150,56 @@ Any parameters not referred to in your call to MadingleyParameters will assume t
 You will see that there is now a much smaller biomass of carnivores and omnivores (because they can only predate much more slowly), and consequently a higher biomass of herbivores and a lower biomass of plants.
 
 Now try instead increasing the handling times for  herbivory. The default value for the terrestrial handling time scalar is 0.7, so try increasing it to 2.8.
+
+## Exercise 3: Running simulations under scenarios of human impact
+
+In this final exercise, we will look at simulating scenarios of human impact using the Madingley Model.
+
+First, reset the ecological parameters to use all default values:
+
+```R
+params <- MadingleyParameters()
+```
+
+Now, re-initialize the model. This time, we need to set a burn-in period (argument 'burnin'), after which the scenario of human impact will be applied. We will stick with a total simulation length of 50 years, and adopt a 25-year burn-in.
+
+```R
+init <- MadingleyInitialisation(duration = 50,burnin = 25,parallel_simulations = "yes",
+                                specific_locations = list(latitudes=2,longitudes=33))
+```
+
+Now when we run the model, we need to specify the scenarios we want, and labels to be applied to the output files (in case you run multiple scenarios, but we will just run one for now). In this scenario, we will remove a constant 80% of net primary production (which corresponds with a reduction in plant biomass). This is specified within the scenarios argument as npp="constant 0.8 0" (don't worry about the final number &#8210; this is used to types of scenario other than the constant-rate one we will use today).
+
+```R
+madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,
+                             numSims = 5,
+                             scenarios = list(label="NPPConstant",
+                                              npp="constant 0.8 0",
+                                              temperature="no 0.0",
+                                              harvesting="no 0.0"))
+```
+
+Plotting this model you will see that after the burn-in is finished and the removal of plant biomass begins, there is (not surprisingly!) a big decline in plant biomass. This leads to a reduction in the biomasses of the higher trophic levels, because there is a smaller total energy entering the ecosystem via the plants. Interestingly, there is a bigger decline in omnivores and carnivores than in herbivores, probably because it is harder for predators to find food, making them more sensitive to loss of plant biomass.
+
+```R
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
+```
+
+Now let's simulate a different type of human impact &#8210; direct hunting of animals. This is specified using the 'harvesting' component of the 'scenarios' argument. In this case the value refers not to a fraction but to the total biomass harvested (in kg per km<sup>2</sup>). We will assume that humans remove 70 tonnes of animal biomass per km<sup>2</sup> (this is probably a rather extreme scenario).
+
+```R
+madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,
+                             numSims = 5,
+                             scenarios = list(label="NPPConstant",
+                                              npp="no 0.0 0",
+                                              temperature="no 0.0",
+                                              harvesting="constant 70000"))
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
+```
+
+You will see from the plot that carnivores are disproportionately impacted. Although herbivores, omnivores and carnivores are all harvested, carnivores emerge as being the most sensitive, probably again because of an interaction with food availability.
+
+If you have finished all of the exercises, have a go at running your own scenarios of human impact. You could try exploring different levels of npp removal or harvesting rates, you could try applying both impacts simultaneously. If you need help running these scenarios, or if you want some different ideas, come and chat with me.
 
 ## References
 
