@@ -129,6 +129,26 @@ PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
 
 You will see that this ecosystem is estimated to have lower biomasses overall, especially of carnivores (the relatively low abundance of carnivores in ecosystems with low plant biomass matches theoretical expectations - see e.g. Post, 2004).
 
+## Exercise 2: Running simulations with altered ecological parameters
+
+So far, we have been running simulations using the default ecological parameters. But it can be interesting to assess the effect on simulated dynamics of changing certain parameters.
+
+Remember from yesterday's lecture that functional responses for a single predator or herbivore organism are composed of two main parameters: attack rates and handling times (the Madingley Model also contains parameters describing variation in attack rates and handling times across organisms, as a function of their body mass). Let's test the effect of increasing the handling time for all predator organisms in the model (the <a href="https://github.com/timnewbold/MadingleyR/blob/master/EcologicalParameters.md">default</a> handling-time scalar is 0.5; we will increase this by a factor of 4 to 2.0):
+
+```R
+init <- MadingleyInitialisation(duration = 50,
+                                specific_locations = list(latitudes=2,longitudes=33))
+params <- MadingleyParameters(pred_terr_handlingscalar = 2.0)
+madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params)
+PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
+```
+
+Any parameters not referred to in your call to MadingleyParameters will assume their default values.
+
+You will see that there is now a much smaller biomass of carnivores and omnivores (because they can only predate much more slowly), and consequently a higher biomass of herbivores and a lower biomass of plants.
+
+Now try instead increasing the handling times for  herbivory. The default value for the terrestrial handling time scalar is 0.7, so try increasing it to 2.8.
+
 ## References
 
 * Harfoot, M.B.J., Newbold, T., Tittensor, D.P., Emmott, S., Hutton, J., Lyutsarev, V., Smith, M.J., Scharlemann, J.P.W. & Purves, D.W. (2014). Emergent global patterns of ecosystem structure and function from a mechanistic general ecosystem model. <i>PLoS Biology</i> <b>12</b>: e1001841.
