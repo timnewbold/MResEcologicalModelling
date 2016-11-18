@@ -1,8 +1,8 @@
-# Session 1: Statistaical Models for Complex Ecological Data
+# Session 1: Statistical Models for Complex Ecological Data
 
 ## Introduction
 
-This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies. I assume experience of running basic statistical methods in R.
+This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies, as presented in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> this morning. I assume experience of running basic statistical methods in R, but do let me know if you get stuck with anything.
 
 Before you start you need to install a few R packages:
 
