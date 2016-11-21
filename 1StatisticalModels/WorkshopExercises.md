@@ -4,7 +4,9 @@
 
 This session will introduce some of the statistical approaches that are available for dealing with the more complex data typical of many ecological studies, as presented in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> this morning. I assume experience of running basic statistical methods in R, but do let me know if you get stuck with anything.
 
-Before you start you need to install a few R packages:
+Before you start you need to have R installed on your computer. You also need to install the version of RTools that is appropriate for your version of R; you can find the installers <a href="https://cran.r-project.org/bin/windows/Rtools">here</a>.
+
+Then you will need to install a few R packages:
 
 ```R
 install.packages("lme4")
@@ -20,7 +22,7 @@ install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
 
 ## Exercise 1: Functional responses - Maximum Likelihood Estimation
 
-In this exercise, we will use data on predator functional responses (i.e. relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
+In this exercise, we will use data on predator functional responses (remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> that these describe the relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
 
 ```R
 library(emdbook)
@@ -56,7 +58,7 @@ summary(m1)
 # F-statistic: 48.88 on 1 and 14 DF,  p-value: 6.334e-06
 ```
 
-This linear model seems to fit the data very well. However, as you heard in the lecture today, and will hear much more about in the lecture tomorrow, there are different theoretical models describing functional responses. One of these (the Type II) functional response is a saturating function:
+This linear model seems to fit the data very well. However, as you heard in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture today</a>, and will hear much more about in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture tomorrow</a>, there are different theoretical models describing functional responses. One of these (the Type II) functional response is a saturating function:
 
 N<sub>killed</sub> = (aN)/(1+aHN),
 
@@ -112,14 +114,24 @@ Now we will fit the more complex 'Type II' functional response model to the data
 # As before, we first need to define the likelihood function
 binomLL <- function(killed,init,p){
   
+  # The next two lines just specify that the first parameter we pass
+  # will be the attack rate, and the second the handling time
   a = p[1]
   h = p[2]
   
+  # This line defines the probability of a prey individual being killed
+  # Note this is the equation for the number killed above, divided by
+  # the intial number of prey
   pkilled <- a/(1+a*h*init)
   
+  # The likelihood in this case is a binomial probability distribution
+  # with the observed number of kills from a total potential number of kills
+  # equal to the initial number of prey, and probability of being killed equal
+  # from above
   -sum(dbinom(x = killed,size = init,prob = pkilled,log = TRUE))
   
 }
+# This line just defines the names for the parameters
 parnames(binomLL) <- c("a","h")
 
 # Now run the likelihood estimation
@@ -135,7 +147,7 @@ m3
 # Log-likelihood: -46.72
 ```
 
-If we compare the AIC values of these models, we can see that the Type II functional response is a slightly better fit to the data (i.e. has a lower AIC value):
+If we compare the AIC values of these models, we can see that the Type II functional response is a slightly better fit to the data (i.e. has a lower AIC value - see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> for a reminder about AIC values):
 ```R
 AIC(m2,m3)
 #         AIC df
@@ -157,7 +169,7 @@ points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
 
 ## Exercise 2: Metabolic Rates - Mixed-effects models
 
-For this first section of this session, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Often there are estimates for several individuals of a species, but sometimes only for one.
+For this exercise, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Remember from the <a href="">lecture</a> that metabolic rates scale as a power function of body mass - much more of this <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">tomorrow</a>. In Hudson et al.'s data, there are often estimates for several individuals of a species, but sometimes only for one.
 
 First, load the necessary packages and data:
 
@@ -170,10 +182,10 @@ To make it easier to specify the models later, we will first create duplicates o
 
 ```R
 HudsonFMR$mass <- HudsonFMR$M_kg
-HudsonFMR$fmr<- HudsonFMR$FMR_kJ_per_day
+HudsonFMR$fmr <- HudsonFMR$FMR_kJ_per_day
 ```
 
-To begin with, fit a simple linear model to the data. We fit both variables log transformed because we expect metabolic rates to follow a power-law relationship. Theory, which we will cover in the lecture tomorrow, suggests exponents of the relationship between mass and metabolic rate of either 2/3 or 3/4.
+To begin with, fit a simple linear model to the data. We will fit both variables log transformed because we expect metabolic rates to follow a power-law relationship. Theory, which we will cover in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture tomorrow</a>, suggests exponents of the relationship between mass and metabolic rate of either 2/3 or 3/4.
 
 ```R
 model1 <- lm(log10(fmr)~log10(mass),data=HudsonFMR)
@@ -216,7 +228,7 @@ Mixed-effects models are a powerful tool for dealing with heterogeneity in respo
 
 There are several R packages for running mixed-effects models. We will be using lme4, which is probably the most widely used.
 
-The specification of models is very similar to the specification of simple linear models. We just need an extra component that describes the random effects. Remember from the lecture that we can fit random intercepts, which describe variation in the overall value of the response variable among different subsets of the data, and random slopes, which describe variation in the relationship between an explanatory variable and the response variable among the same subsets.
+The specification of mixed-effects models is very similar to the specification of simple linear models. We just need an extra component that describes the random effects (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture slides</a> if you need a reminder about the difference between fixed effects and random effects). We can fit random intercepts, which describe variation in the overall value of the response variable among different subsets of the data, and random slopes, which describe variation in the relationship between an explanatory variable and the response variable across these subsets.
 
 First, we will run a simple mixed-effects model with a random intercept describing variation in recorded metabolic rates among the studies from which data were taken:
 
@@ -258,7 +270,7 @@ R2GLMER(model2)
 
 Accounting for the possibly different protocols used to collect the data, this model suggests a slightly steeper relationship between body mass and metabolic rate. In the information about the model that R returns, the section on random effects shows the variation in the response variable that is accounted for by variation among studies (a standard deviation of 0.2288) as well as the unexplained residual variation (standard deviation of 0.1141).
 
-It is possible that the slope of the relationship between mass and metabolic rate also varies among studies. To test this possibility, we will now fit a model with a random slope of mass nested within study identity:
+It is possible that the slope of the relationship between mass and metabolic rate also varies among studies. To test this possibility, we will now fit a model with a random slope of mass nested within study identity (this is specified as '(1+log10(mass)|Study)'):
 
 ```R
 model3 <- lmer(log10(fmr)~log10(mass)+(1+log10(mass)|Study),data=HudsonFMR)
@@ -318,24 +330,24 @@ model4
 # (Intercept)  log10(mass)  
 #      2.9422       0.6587
 
-# Note we are comparing with model here, which was the simpler (and nested) model without random slopes
+# Note we are comparing with model 2 here, which was the simpler (and nested) model without random slopes
 AIC(model2,model4)
 #        df       AIC
 # model2  4 -1773.331
 # model4  5 -1893.492
 ```
 
-Clearly, including a random effect of species identity substantially improved the model fit. A lot of variation in the response variable (metabolic rate) is explained by variation among species. In fact a lot of the variation that we previously attributed to variation among studies is shown in this model to be attributable to variation among species (a potential difficulty for the model here is that study identity and species identity are obviously correlated; in other words, certain studies tended to focus on certain species).
+Clearly, including a random effect of species identity substantially improved the model fit (i.e. the AIC values of model4 is much lower than that of model2). A lot of variation in the response variable (metabolic rate) is explained by variation among species. In fact a lot of the variation that we previously attributed to variation among studies is shown in this model to be attributable to variation among species (a potential difficulty for the model here is that study identity and species identity are obviously correlated; in other words, certain studies tended to focus on certain species).
 
 Have a think about other ways that you could analyse these variables (for example, other explanatory variables that you could consider). For hints, you could have a look at the paper by Hudson et. al.
 
-One thing to note from this exercise is that whichever model we used (even the simple linear regression), the answer that we obtained was relatively similar (although Hudson et al. conducted more complex analyses - for example considering differences between mammals and birds - and showed that the results were not quite so simple). This is probably because it is relatively easy to follow a standard protocol to estimate species metabolic rates and body masses, and because the variation in metabolic rates among species did not bias our estimates of the relationship between body mass and metabolic rate. This does not mean necessarily that it is appropriate to use the simple linear regression when we have reason to suspect some underlying variation or non-independence in the data. We will see an example later where failure to account for the hierarchical structure of the data could lead to totally the wrong conclusions.
+One thing to note from this exercise is that whichever model we used (even the simple linear regression), the answer that we obtained was relatively similar (although Hudson et al. conducted more complex analyses - for example considering differences between mammals and birds - and showed that the results were not quite so simple). This is probably because it is relatively easy to follow a standard protocol to estimate species metabolic rates and body masses (and so variation in the estimates among studies is not enormous), and because the variation in metabolic rates among species did not bias our estimates of the relationship between body mass and metabolic rate. This does not mean necessarily that it is appropriate to use the simple linear regression when we have reason to suspect some underlying variation or non-independence in the data. We will see an example later where failure to account for the hierarchical structure of the data could lead to totally the wrong conclusions.
 
 ## Exercise 3: Metabolic Rates - Bayesian Models
 
 In this section, we will use the data on metabolic rates from Hudson et al. (2014) again. As before, we will be considering the relationship between body mass and field metabolic rates.
 
-The models will be run from within R, but call the WinBUGS program externally. You will need to download and install this program. How you do this depends whether you have a 32-bit or 64-bit computer. If you need help, just give me a shout.
+The models will be run from within R, but call the WinBUGS program externally. You will need to download and install this program (instructions and the installers can be found <a href="http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/">here</a>. The method used to install WinBUGS depends whether you have a 32-bit or 64-bit computer. If you need help, just give me a shout.
 
 Before we start with the Bayesian models, we will remind ourselves of the linear model of (log) metabolic rate as a function of (log) body mass:
 
@@ -376,7 +388,7 @@ In order to run Bayesian models (using the Gibbs sampler), we will use the packa
 library(R2WinBUGS)
 ```
 
-First, set up the x and y variables, and a variable for the number of observations, from the data:
+First, set up the x and y variables, and a variable for the number of observations:
 
 ```R
 x <- log10(HudsonFMR$mass)
@@ -385,7 +397,7 @@ y <- log10(HudsonFMR$fmr)
 n <- length(x)
 ```
 
-We need to create a text file (.bug extension) that describes the model (likelihood function and prior probabilities for the parameters). We can do this using the 'sink' function in R. We will start with a model that has very weak prior probabilities (i.e. the data will dictate the posterior probabilities). To do this we will assume a normal prior distribution for the slope and intercept parameters with means of zero and very low precision. Note that the 'dnorm' function in WinBUGs, unlike its counterpart in R, uses a precision parameter (1/variance<sup>2</sup>) instead of standard deviation. We will convert back to standard deviation in the model, for comparability with the linear model above. For the prior probability for the standard deviation parameter, we will use a uniform distribution because we need to prevent the sampler from trying values less than zero (this would lead to errors of course).
+We need to create a text file (.bug extension) that describes the model (likelihood function and prior probabilities for the parameters). We can do this using the 'sink' function in R. We will start with a model that has very weak prior probabilities (i.e. the data will dictate the posterior probabilities) - see the <a href="">lecture slides</a> for a reminder of prior and posterior probabilities. We will assume a normal prior distribution for the slope and intercept parameters with means of zero and very low precision (i.e. very high standard deviation). Note that the 'dnorm' function in WinBUGS, unlike its counterpart in R, uses a precision parameter (1/variance or 1/(standard deviation)<sup>2</sup>) instead of standard deviation itself. We will convert back to standard deviation in the model, for comparability with the linear model above. For the prior probability for the standard deviation parameter we will use a uniform distribution, because we need to prevent the sampler from trying values less than zero (this would lead to errors of course).
 
 ```R
 sink("LinearRegressionWeakPriors.bug")
@@ -428,7 +440,7 @@ model2 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
             bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
 ```
 
-The model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the confidence intervals used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
+The model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the 'confidence intervals' used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
 
 ```R
 model2
@@ -446,7 +458,7 @@ model2
 # DIC is an estimate of expected predictive error (lower deviance is better).
 ```
 
-The precision of the values returned in the overall table is not very high. If we display just the summary of the parameter values (which gives higher precision), you will see that the parameter estimates are very similar to those obtained by the linear model, above:
+The precision of the values printed in the overall table is not very high. If we display just the summary of the parameter values (which gives higher precision), you will see that the parameter estimates are very similar to those obtained by the linear model, above:
 
 ```R
 model2$summary
@@ -485,7 +497,7 @@ model3 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
             bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
 ```
 
-You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used. The influence of the priors would be greater if the likelihood profile were shallower, for example of the dataset being used were smaller.
+You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
 
 ```R
 model3$summary
@@ -496,7 +508,7 @@ model3$summary
 # deviance  140.5949000 12.702438976 117.3974990 131.5000 140.4000 148.8500 166.4199533
 ```
 
-You can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to anything but confirm prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
+Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
 
 ## Exercise 4: Land use impacts on biodiversity - Mixed-effects models
 
