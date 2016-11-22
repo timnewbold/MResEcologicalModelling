@@ -14,8 +14,14 @@ install.packages("arm")
 install.packages("emdbook")
 install.packages("bbmle")
 install.packages("R2WinBUGS")
+# If the next line doesn't work, come to see me for a version
+# of the StatisticalModels and MResModelling packages
 install.packages("devtools")
 library(devtools)
+install.packages("survival")
+install.packages("Formula")
+install.packages("ggplot2")
+install.packages("Hmisc")
 install_github("timnewbold/StatisticalModels")
 install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
 ```
@@ -257,6 +263,8 @@ summary(model2)
 # log10(mass)  0.68061    0.01420   47.92
 ```
 
+The 'Std.Dev.' column under 'Random effects:' shows tha variation in the response variable (here, field metabolic rate) is explained by each of the random-intercept terms in the model. You can see that a fair amount of the variation in metabolic rates is explained by the identity of the study from which the data were taken.
+
 We can calculate pseudo-R<sup>2</sup>values, using a method proposed by Nakagawa & Schielzeth (2013)
 
 ```R
@@ -337,7 +345,7 @@ AIC(model2,model4)
 # model4  5 -1893.492
 ```
 
-Clearly, including a random effect of species identity substantially improved the model fit (i.e. the AIC values of model4 is much lower than that of model2). A lot of variation in the response variable (metabolic rate) is explained by variation among species. In fact a lot of the variation that we previously attributed to variation among studies is shown in this model to be attributable to variation among species (a potential difficulty for the model here is that study identity and species identity are obviously correlated; in other words, certain studies tended to focus on certain species).
+Clearly, including a random effect of species identity substantially improved the model fit (i.e. the AIC values of model4 is much lower than that of model2). A lot of variation in the response variable (metabolic rate) is explained by variation among species (looking at the column 'Std.Dev.' under 'Random effects:' again). In fact a lot of the variation that we previously attributed to variation among studies is shown in this model to be attributable to variation among species (a potential difficulty for the model here is that study identity and species identity are obviously correlated; in other words, certain studies tended to focus on certain species).
 
 Have a think about other ways that you could analyse these variables (for example, other explanatory variables that you could consider). For hints, you could have a look at the paper by Hudson et. al.
 
@@ -543,11 +551,11 @@ random1 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = 
                  randomStruct = "(1|SS)")
 ```
 
-Note that we have included land use, and also quadratic polynomial terms for both human population density and distance to nearest road. It is customary to compare different random-effects structures before comparing models with different fixed effects, and to use the most complex combination of fixed effects that will be considered in doing so.
+Note that we have included in this model land use, and also quadratic polynomial terms for both human population density and distance to nearest road. It is customary to compare different random-effects structures before comparing models with different fixed effects, and while doing so to use the most complex combination of fixed effects that will be considered (here land use plus human population density plus distance to nearest road).
  
 In the PREDICTS data there is also sometimes spatial structuring of sites within studies (for example, if the authors of the original papers sampled sites arranged in spatial blocks within a landscape). Therefore, we might also consider a term to account for this structuring (there is one in the PREDICTS data: 'SSB').
 
-If two factors that you want to include are overlapping then they are referred to as 'crossed'. For example, in the analysis of metabolic rates in Exercise 2, a species could be sampled in multiple studies. 
+If two factors that you want to include are overlapping then they are referred to as 'crossed'. For example, in the analysis of metabolic rates in Exercise 2, a species could be sampled in multiple studies, and therefore study and species identity were 'crossed' random effects. 
 
 An alternative structure to the data is to have nested random effects. The case of spatial blocks within studies in the PREDICTS data is an example - a particular spatial block can only belong to one study. In this case, there are two ways to fit the random-effects structure. Sometimes the factors are specified in a way that doesn't account for their nestedness. For example, if there were 4 spatial blocks numbered 1 to 4 in one study, and 5 spatial blocks numbered 1 to 5 in a second study. In this case, the model has no way to know that block 1 in study 1 shouldn't be treated as being the same as block 1 in study 2. The hierarchical nature of the random effect must then be specified in the model as follows: (1|SS/SSB). Alternatively the hierarchical structure can be accounted for in the specification of the variables, for example by naming the spatial blocks 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, and 2.5, where the first number indicates the identity of the study. In this case, the random effects can be specified either in the nested fashion (1|SS/SSB) or in the same way as crossed random effects (1|SS)+(1|SSB). This latter approach is easier to work with and is the way we will use with the PREDICTS data (where the nested random effects were specified in the data).
 
@@ -566,7 +574,7 @@ AIC(random1$model,random2$model)
 # random2$model 13 33758.41
 ```
 
-If you look at the model output, you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
+If you look at the model output, in the column 'Std.Dev.' under 'Random effects:', you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
 
 
 ```R
@@ -584,7 +592,7 @@ random2$model
 # Number of obs: 13197, groups:  SSB, 1531; SS, 428
 ```
 
-Now we have identified our random-effects structure, we can select a combination of fixed effects that adeuqately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My ModelSelect function in the StatisticalModels package does this for you. The call for this function separates categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
+Now we have identified our random-effects structure, we can select a combination of fixed effects that adequately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My GLMERSelect function in the StatisticalModels package does this for you. The call for this function separates categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
 
 ```R
 abundModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "LogAbund",
@@ -593,7 +601,7 @@ abundModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "LogAbun
                                 randomStruct = "(1|SS)+(1|SSB)",verbose = TRUE)
 ```
 
-If you look at the output that was printed to screen, you will see that the effect of distance to nearest road was first simplified to a linear effect, and then dropped altogether, whereas the effect of human population density was retained as a quadratic polynomial. The effect of land use was retained. Viewing the table of statistics that is output by the function shows the same things (the row for the linear effect of human population density is blank because the quadratic effect was better):
+If you look at the output that was printed to screen, you will see that the effect of distance to nearest road was first simplified to a linear effect, and then dropped altogether, whereas the effect of human population density was retained as a quadratic polynomial. The effect of land use was retained. Viewing the table of statistics that is output by the function shows the same things (the row for the linear effect of human population density is blank because the quadratic effect was significantly better):
 
 ```R
 abundModelSelect$stats
@@ -628,9 +636,9 @@ We have to specify all of the terms (factors and continuous effects) that were i
 
 Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Observed species richness values commonly have a variance greater than the mean, a situation known as over-dispersion.
 
-There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
+There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these packages are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
 
-But before we get onto this, let's compare the study-only and study-plus-spatial-block random-effects structures that we considered for the models of total abundance. You will probably receive warnings about model convergence, but these aren't too serious.
+But before we get onto this, let's compare the study-only and study-plus-spatial-block random-effects structures that we considered for the models of total abundance. You will probably receive warnings about model convergence, but these aren't too serious (the convergence value is close to the accepted threshold, and the functions in the lme4 package are very cautious about convergence).
 
 ```R
 randomR1 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
@@ -695,7 +703,7 @@ GLMEROverdispersion(model = randomR3$model)
 # [1] 1
 ```
 
-Now we have selected a random-effects structure for our species richness model, we can perform backward stepwise model selection:
+Now we have selected a random-effects structure for our species richness model, we can perform backward stepwise model selection (again, this might take a while to run!):
 
 ```R
 richModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "Species_richness",
