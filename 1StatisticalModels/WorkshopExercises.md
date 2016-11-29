@@ -14,6 +14,8 @@ install.packages("arm")
 install.packages("emdbook")
 install.packages("bbmle")
 install.packages("R2WinBUGS")
+# Alternatively, if you are using a Mac, install this package instead
+install.packages("rjags")
 # If the next line doesn't work, come to see me for a version
 # of the StatisticalModels and MResModelling packages
 install.packages("devtools")
@@ -538,9 +540,13 @@ sink()
 model3 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
                model="LinearRegressionStrongSlopePrior.bug",
             bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+
+# Or if you need to use JAGS on Mac
+model3 <- jags.model(file="LinearRegressionStrongSlopePrior.bug", data=mr.data, inits=inits,
+                     n.chains = 1)
 ```
 
-You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
+If you are running WinBUGS on Windows, print out the model:
 
 ```R
 model3$summary
@@ -550,6 +556,28 @@ model3$summary
 # sd          0.2535648  0.004488158   0.2454975   0.2504   0.2535   0.2566   0.2624000
 # deviance  140.5949000 12.702438976 117.3974990 131.5000 140.4000 148.8500 166.4199533
 ```
+
+Alternatively if you are running JAGS, you will need to sample from the posterior parameter estimates manually:
+
+```R
+coef.samples <- jags.samples(model = model3,variable.names = c("intercept","slope","sd"),1000)
+
+coef.estimates <- with(coef.samples,rbind(
+  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
+  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
+  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
+))
+row.names(coef.estimates) <- c("intercept","slope","sd")
+
+# Now display these estimates
+coef.estimates
+#                mean      2.5%    median     97.5%
+# intercept 3.0027276 2.9891472 3.0028965 3.0162356
+# slope     0.7090535 0.7017819 0.7089133 0.7168327
+# sd        0.2536759 0.2443110 0.2534583 0.2638492
+```
+
+You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
 
 Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
 
