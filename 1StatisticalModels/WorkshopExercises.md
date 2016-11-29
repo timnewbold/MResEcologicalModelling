@@ -357,6 +357,8 @@ In this section, we will use the data on metabolic rates from Hudson et al. (201
 
 The models will be run from within R, but call the WinBUGS program externally. You will need to download and install this program (instructions and the installers can be found <a href="http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/">here</a>. The method used to install WinBUGS depends whether you have a 32-bit or 64-bit computer. If you need help, just give me a shout.
 
+If you are running a computer with an operating system other than Windows, you will need to install JAGS instead. This software can be downloaded <a href="https://sourceforge.net/projects/mcmc-jags/">here</a>.
+
 Before we start with the Bayesian models, we will remind ourselves of the linear model of (log) metabolic rate as a function of (log) body mass:
 
 ```R
@@ -432,6 +434,9 @@ Now we need to define the data and parameters, and set initial values for the pa
 ```R
 # Define the data
 mr.data <- list("x","y","n")
+# Or if you are running JAGS on Mac
+mr.data <- list('x'=x, 'y'=y,'n'=n)
+
 
 # Define the parameters
 params <- c("intercept","slope","sd")
@@ -446,9 +451,13 @@ Now we can run the model. We will run just one parameter chain for now. Running 
 model2 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
                model="LinearRegressionWeakPriors.bug",
             bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+
+# Or if you need to use JAGS on Mac
+model2 <- jags.model(file="LinearRegressionWeakPriors.bug", data=mr.data, inits=inits,
+                     n.chains = 1)
 ```
 
-The model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the 'confidence intervals' used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
+If you are running on WinBUGS, the model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the 'confidence intervals' used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
 
 ```R
 model2
@@ -476,6 +485,32 @@ model2$summary
 # sd         0.2458753 0.004657877  0.237000  0.242800  0.2457  0.2492  0.2553025
 # deviance  45.9723500 2.537637046 43.149750 44.160000 45.2200 47.0650 52.4512494
 ```
+
+If you are running on JAGS, you need to use a separate function to sample from the posterior parameter values. We will take 1000 samples from the posterior values in the MCMC chain:
+
+```R
+coef.samples <- jags.samples(model = model2,variable.names = c("intercept","slope","sd"),1000)
+```
+
+Then we need to manually calculate the posterior means, medians and credible intervals for each of the parameters:
+
+```R
+coef.estimates <- with(coef.samples,rbind(
+  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
+  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
+  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
+))
+row.names(coef.estimates) <- c("intercept","slope","sd")
+
+# Now display these estimates
+coef.estimates
+#                mean      2.5%    median    97.5%
+# intercept 2.9598977 2.9455276 2.9599261 2.974921
+# slope     0.6531842 0.6415785 0.6531705 0.664649
+# sd        0.2460361 0.2369341 0.2461339 0.255231
+```
+
+You will see that the parameter estimates are very similar, but not identical, to the estimates produced by BUGs.
 
 Now let us suppose that we have information strongly suggesting a particular value of the slope parameter. For the sake of argument, let's assume that this is the value of 0.75 predicted by metabolic theory. We can refit the model, but this time inserting the value of 0.75, with a high precision, into the prior distribution for the slope parameter.
 
