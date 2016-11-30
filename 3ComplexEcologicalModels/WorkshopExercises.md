@@ -1,6 +1,6 @@
 # Session 3: Complex Ecological Models
 
-This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Of course, as you saw in the <a href="">lecture</a>, there are lots of other complex systems-level ecological models that could be used. But I know the details of the Madingley Model! 
+This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Of course, as you saw in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/3ComplexEcologicalModels/Lecture3_ComplexEcologicalModels.pdf">lecture</a>, there are lots of other complex systems-level ecological models that could be used. But I am most familiar with the Madingley Model! 
 
 Using the MadingleyR R package, you will download the model, run and plot basic simulations of the model, try altering the parameters of the model, and run scenarios of human impacts in the model.
 
@@ -28,9 +28,20 @@ install.packages(paste(installationDir,"sds_0.1-5.zip",sep=""),
                  repos = NULL, type = "win.binary")
 ```
 
-Now you need to install the R package that interfaces with the Madingley Model, and the R package for plotting Madingley simulations.
+Now you need to install the R package that interfaces with the Madingley Model, the R package for plotting Madingley simulations, and some other required packages.
 
 ```R
+install.packages("sp")
+install.packages("rgdal")
+install.packages("survival")
+install.packages("Formula")
+install.packages("ggplot2")
+install.packages("acepack")
+install.packages("latticeExtra")
+install.packages("gridExtra")
+install.packages("htmlTable")
+install.packages("htmltools")
+install.packages("data.table")
 library(devtools)
 install_github("timnewbold/MadingleyR",subdir = "MadingleyR")
 install_github("timnewbold/MadingleyPlots",subdir = "MadingleyPlots")
