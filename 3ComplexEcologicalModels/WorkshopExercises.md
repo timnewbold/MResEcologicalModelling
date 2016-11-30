@@ -158,9 +158,9 @@ PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
 
 Any parameters not referred to in your call to MadingleyParameters will assume their default values.
 
-You will see that there is now a much smaller biomass of carnivores and omnivores (because they can only predate much more slowly), and consequently a higher biomass of herbivores and a lower biomass of plants.
+You will see that there is now a much smaller biomass of carnivores and omnivores (because they now predate much more slowly), and consequently a higher biomass of herbivores and a lower biomass of plants.
 
-Now try instead increasing the handling times for  herbivory. The default value for the terrestrial handling time scalar is 0.7, so try increasing it to 2.8.
+Now try instead increasing the handling times for herbivory. The default value for the terrestrial handling time scalar is 0.7, so try increasing it to 2.8.
 
 ## Exercise 3: Running simulations under scenarios of human impact
 
@@ -179,7 +179,7 @@ init <- MadingleyInitialisation(duration = 50,burnin = 25,parallel_simulations =
                                 specific_locations = list(latitudes=2,longitudes=33))
 ```
 
-Now when we run the model, we need to specify the scenarios we want, and labels to be applied to the output files (in case you run multiple scenarios, but we will just run one for now). In this scenario, we will remove a constant 80% of net primary production (which corresponds with a reduction in plant biomass). This is specified within the scenarios argument as npp="constant 0.8 0" (don't worry about the final number &#8210; this is used to types of scenario other than the constant-rate one we will use today).
+Now when we run the model, we need to specify the scenarios we want, and labels to be applied to the output files (in case you run multiple scenarios, but we will just run one for now). In this scenario, we will remove a constant 80% of net primary production (which corresponds with a reduction in plant biomass). This is specified within the scenarios argument as npp="constant 0.8 0" (don't worry about the final number &#8210; this is used for types of scenario other than the constant-rate one we will use today).
 
 ```R
 madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,
@@ -196,7 +196,7 @@ Plotting this model you will see that after the burn-in is finished and the remo
 PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
 ```
 
-Now let's simulate a different type of human impact &#8210; direct hunting of animals. This is specified using the 'harvesting' component of the 'scenarios' argument. In this case the value refers not to a fraction but to the total biomass harvested (in kg per km<sup>2</sup>). We will assume that humans remove 70 tonnes of animal biomass per km<sup>2</sup> (this is probably a rather extreme scenario).
+Now let's simulate a different type of human impact &#8210; direct hunting of animals. This is specified using the 'harvesting' component of the 'scenarios' argument. In this case the value refers not to a fraction but to the total biomass harvested (in kg per km<sup>2</sup>). We will assume that humans remove 65 tonnes of animal biomass per km<sup>2</sup> (this is probably a rather extreme scenario).
 
 ```R
 madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,
@@ -204,7 +204,7 @@ madingleySim <- RunMadingley(codeDir = codeDir,init = init,params = params,
                              scenarios = list(label="NPPConstant",
                                               npp="no 0.0 0",
                                               temperature="no 0.0",
-                                              harvesting="constant 70000"))
+                                              harvesting="constant 65000"))
 PlotTemporal(resultsDir = madingleySim$outputDir,plotName = "BiomassDensity")
 ```
 
