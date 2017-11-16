@@ -175,413 +175,10 @@ preds$Killed <- preds$Initial *
 points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
 ```
 
-## Exercise 2: Metabolic Rates - Mixed-effects models
+## Exercise 2: Generalized linear models
 
-For this exercise, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Remember from the <a href="">lecture</a> that metabolic rates scale as a power function of body mass - much more of this <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">tomorrow</a>. In Hudson et al.'s data, there are often estimates for several individuals of a species, but sometimes only for one.
 
-First, load the necessary packages and data:
-
-```R
-library(MResModelling)
-data(HudsonFMR)
-```
-
-To make it easier to specify the models later, we will first create duplicates of the data columns with simpler names:
-
-```R
-HudsonFMR$mass <- HudsonFMR$M_kg
-HudsonFMR$fmr <- HudsonFMR$FMR_kJ_per_day
-```
-
-To begin with, fit a simple linear model to the data. We will fit both variables log transformed because we expect metabolic rates to follow a power-law relationship. Theory, which we will cover in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture tomorrow</a>, suggests exponents of the relationship between mass and metabolic rate of either 2/3 or 3/4.
-
-```R
-model1 <- lm(log10(fmr)~log10(mass),data=HudsonFMR)
-
-model1
-# Call:
-# lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
-# 
-# Coefficients:
-# (Intercept)  log10(mass)  
-#      2.9596       0.6528
-
-summary(model1)
-# Call:
-#   lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
-# 
-# Residuals:
-#   Min       1Q   Median       3Q      Max 
-# -1.03553 -0.14913  0.03124  0.16596  0.63925 
-# 
-# Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept) 2.959603   0.007681   385.3   <2e-16 ***
-#   log10(mass) 0.652813   0.005660   115.3   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 0.2456 on 1496 degrees of freedom
-# Multiple R-squared:  0.8989,	Adjusted R-squared:  0.8989 
-# F-statistic: 1.33e+04 on 1 and 1496 DF,  p-value: < 2.2e-16
-```
-
-From this you can see that the model fits very well, and we get a slope of 0.65, fairly close to the 2/3 expected by one branch of theory.
-
-However, there are features of the data that mean that this simple model might not be the most appropriate.
-
-Because datasets are now made available alongside many published papers and because there has been a rapid increase in computing power, there has been a growth in the use of synthetic analyses that make use of collations of existing data. Such analyses have the advantage of greater statistical power brought about by the increased size of datasets, and often greater ability to generalize patterns across different contexts. However, no matter how much we attempt to find datasets that have been collected in the same way, there are likely to be some differences in protocol.
-
-Mixed-effects models are a powerful tool for dealing with heterogeneity in response variables that is not caused by the variables that you are asking questions about but that could otherwise bias the results and conclusions, including heterogeneity caused by assembling data from lots of different studies.
-
-There are several R packages for running mixed-effects models. We will be using lme4, which is probably the most widely used.
-
-The specification of mixed-effects models is very similar to the specification of simple linear models. We just need an extra component that describes the random effects (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture slides</a> if you need a reminder about the difference between fixed effects and random effects). We can fit random intercepts, which describe variation in the overall value of the response variable among different subsets of the data, and random slopes, which describe variation in the relationship between an explanatory variable and the response variable across these subsets.
-
-First, we will run a simple mixed-effects model with a random intercept describing variation in recorded metabolic rates among the studies from which data were taken:
-
-```R
-model2 <- lmer(log10(fmr)~log10(mass)+(1|Study),data=HudsonFMR)
-# The '(1|Study)' describes a random intercept of study
-
-model2
-# Linear mixed model fit by REML ['lmerMod']
-# Formula: log10(fmr) ~ log10(mass) + (1 | Study)
-#    Data: HudsonFMR
-# REML criterion at convergence: -1781.331
-# Random effects:
-#  Groups   Name        Std.Dev.
-#  Study    (Intercept) 0.2288  
-#  Residual             0.1141  
-# Number of obs: 1498, groups:  Study, 126
-# Fixed Effects:
-# (Intercept)  log10(mass)  
-#      2.9603       0.6806 
-
-summary(model2)
-# Fixed effects:
-#             Estimate Std. Error t value
-# (Intercept)  2.96033    0.02213  133.75
-# log10(mass)  0.68061    0.01420   47.92
-```
-
-The 'Std.Dev.' column under 'Random effects:' shows tha variation in the response variable (here, field metabolic rate) is explained by each of the random-intercept terms in the model. You can see that a fair amount of the variation in metabolic rates is explained by the identity of the study from which the data were taken.
-
-We can calculate pseudo-R<sup>2</sup>values, using a method proposed by Nakagawa & Schielzeth (2013)
-
-```R
-R2GLMER(model2)
-# $conditional
-# [1] 0.9799064
-# 
-# $marginal
-# [1] 0.8991389
-```
-
-Accounting for the possibly different protocols used to collect the data, this model suggests a slightly steeper relationship between body mass and metabolic rate. In the information about the model that R returns, the section on random effects shows the variation in the response variable that is accounted for by variation among studies (a standard deviation of 0.2288) as well as the unexplained residual variation (standard deviation of 0.1141).
-
-It is possible that the slope of the relationship between mass and metabolic rate also varies among studies. To test this possibility, we will now fit a model with a random slope of mass nested within study identity (this is specified as '(1+log10(mass)|Study)'):
-
-```R
-model3 <- lmer(log10(fmr)~log10(mass)+(1+log10(mass)|Study),data=HudsonFMR)
-# You can include additional random slopes to the left of the '|' if you have other fixed effects in your model
-
-model3
-# Linear mixed model fit by REML ['lmerMod']
-# Formula: log10(fmr) ~ log10(mass) + (1 + log10(mass) | Study)
-#    Data: HudsonFMR
-# REML criterion at convergence: -1840.272
-# Random effects:
-#  Groups   Name        Std.Dev. Corr
-#  Study    (Intercept) 0.2282       
-#           log10(mass) 0.1366   0.43
-#  Residual             0.1101       
-# Number of obs: 1498, groups:  Study, 126
-# Fixed Effects:
-# (Intercept)  log10(mass)  
-#      2.9176       0.6415  
-
-summary(model3)
-# Fixed effects:
-#             Estimate Std. Error t value
-# (Intercept)  2.91757    0.02646  110.26
-# log10(mass)  0.64146    0.02031   31.59
-```
-
-Comparing the AIC values suggests that a model accounting for variation among studies in the slopes of the relationship gives a better fit to the data, and a slope estimate more like that obtained with a simple linear regression:
-
-```R
-AIC(model2,model3)
-#        df       AIC
-# model2  4 -1773.331
-# model3  6 -1828.272
-```
-
-The data contain estimates for multiple species, often with multiple estimates for a single species. Metabolic rates might differ among species, which could influence our ability to detect the relationship between body mass and metabolic rate. So let's fit a model with a random intercept for species as well as for study identity (note we have dropped the random slope here because there are insufficient data to create a reliable model that includes both random intercepts and the random slope term):
-
-```R
-# First create a column holding the species binomial
-HudsonFMR$binomial <- paste(HudsonFMR$Genus,HudsonFMR$Species)
-
-model4 <- lmer(log10(fmr)~log10(mass)+(1|Study)+(1|binomial),data=HudsonFMR)
-
-model4
-# Linear mixed model fit by REML ['lmerMod']
-# Formula: log10(fmr) ~ log10(mass) + (1 | Study) + (1 | binomial)
-#    Data: HudsonFMR
-# REML criterion at convergence: -1903.492
-# Random effects:
-#  Groups   Name        Std.Dev.
-#  binomial (Intercept) 0.19490 
-#  Study    (Intercept) 0.09435 
-#  Residual             0.10799 
-# Number of obs: 1498, groups:  binomial, 133; Study, 126
-# Fixed Effects:
-# (Intercept)  log10(mass)  
-#      2.9422       0.6587
-
-# Note we are comparing with model 2 here, which was the simpler (and nested) model without random slopes
-AIC(model2,model4)
-#        df       AIC
-# model2  4 -1773.331
-# model4  5 -1893.492
-```
-
-Clearly, including a random effect of species identity substantially improved the model fit (i.e. the AIC values of model4 is much lower than that of model2). A lot of variation in the response variable (metabolic rate) is explained by variation among species (looking at the column 'Std.Dev.' under 'Random effects:' again). In fact a lot of the variation that we previously attributed to variation among studies is shown in this model to be attributable to variation among species (a potential difficulty for the model here is that study identity and species identity are obviously correlated; in other words, certain studies tended to focus on certain species).
-
-Have a think about other ways that you could analyse these variables (for example, other explanatory variables that you could consider). For hints, you could have a look at the paper by Hudson et. al.
-
-One thing to note from this exercise is that whichever model we used (even the simple linear regression), the answer that we obtained was relatively similar (although Hudson et al. conducted more complex analyses - for example considering differences between mammals and birds - and showed that the results were not quite so simple). This is probably because it is relatively easy to follow a standard protocol to estimate species metabolic rates and body masses (and so variation in the estimates among studies is not enormous), and because the variation in metabolic rates among species did not bias our estimates of the relationship between body mass and metabolic rate. This does not mean necessarily that it is appropriate to use the simple linear regression when we have reason to suspect some underlying variation or non-independence in the data. We will see an example later where failure to account for the hierarchical structure of the data could lead to totally the wrong conclusions.
-
-## Exercise 3: Metabolic Rates - Bayesian Models
-
-In this section, we will use the data on metabolic rates from Hudson et al. (2014) again. As before, we will be considering the relationship between body mass and field metabolic rates.
-
-The models will be run from within R, but call the WinBUGS program externally. You will need to download and install this program (instructions and the installers can be found <a href="http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/">here</a>. The method used to install WinBUGS depends whether you have a 32-bit or 64-bit computer. If you need help, just give me a shout.
-
-If you are running a computer with an operating system other than Windows, you will need to install JAGS instead. This software can be downloaded <a href="https://sourceforge.net/projects/mcmc-jags/">here</a>.
-
-Before we start with the Bayesian models, we will remind ourselves of the linear model of (log) metabolic rate as a function of (log) body mass:
-
-```R
-model1 <- lm(log10(fmr)~log10(mass),data=HudsonFMR)
-
-model1
-# Call:
-# lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
-# 
-# Coefficients:
-# (Intercept)  log10(mass)  
-#      2.9596       0.6528
-
-summary(model1)
-# Call:
-#   lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
-# 
-# Residuals:
-#   Min       1Q   Median       3Q      Max 
-# -1.03553 -0.14913  0.03124  0.16596  0.63925 
-# 
-# Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept) 2.959603   0.007681   385.3   <2e-16 ***
-#   log10(mass) 0.652813   0.005660   115.3   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 0.2456 on 1496 degrees of freedom
-# Multiple R-squared:  0.8989,	Adjusted R-squared:  0.8989 
-# F-statistic: 1.33e+04 on 1 and 1496 DF,  p-value: < 2.2e-16
-```
-
-In order to run Bayesian models (using the Gibbs sampler), we will use the package 'R2WinBUGS':
-
-```R
-library(R2WinBUGS)
-```
-
-First, set up the x and y variables, and a variable for the number of observations:
-
-```R
-x <- log10(HudsonFMR$mass)
-y <- log10(HudsonFMR$fmr)
-
-n <- length(x)
-```
-
-We need to create a text file (.bug extension) that describes the model (likelihood function and prior probabilities for the parameters). We can do this using the 'sink' function in R. We will start with a model that has very weak prior probabilities (i.e. the data will dictate the posterior probabilities) - see the <a href="">lecture slides</a> for a reminder of prior and posterior probabilities. We will assume a normal prior distribution for the slope and intercept parameters with means of zero and very low precision (i.e. very high standard deviation). Note that the 'dnorm' function in WinBUGS, unlike its counterpart in R, uses a precision parameter (1/variance or 1/(standard deviation)<sup>2</sup>) instead of standard deviation itself. We will convert back to standard deviation in the model, for comparability with the linear model above. For the prior probability for the standard deviation parameter we will use a uniform distribution, because we need to prevent the sampler from trying values less than zero (this would lead to errors of course).
-
-```R
-sink("LinearRegressionWeakPriors.bug")
-cat("
-    model {
-    	# Prior probabilities (note very low precision)
-    	intercept ~ dnorm(0,0.001)
-    	slope ~ dnorm(0,0.001)
-    	sd ~ dunif(0,100)
-    	# Likelihood
-    	for (i in 1:n){
-    		y[i] ~ dnorm(mu[i],tau)
-    		mu[i] <- intercept + slope*x[i]
-    	}    
-    	# Calculate precision parameter from standard deviation
-    	tau <- 1/(sd*sd)
-    }
-    ", fill=TRUE)
-sink() 
-```
-
-Now we need to define the data and parameters, and set initial values for the parameters:
-
-```R
-# Define the data
-mr.data <- list("x","y","n")
-# Or if you are running JAGS on Mac
-mr.data <- list('x'=x, 'y'=y,'n'=n)
-
-
-# Define the parameters
-params <- c("intercept","slope","sd")
-
-# Set initial values for the parameters
-inits <- list(list(intercept=0,slope=0,sd=1))
-```
-
-Now we can run the model. We will run just one parameter chain for now. Running multiple parameter chains (with different starting parameter values) can be useful to make sure that the optimizer doesn't get stuck in local minima in the likelihood surface. This is more likely with more complex, multi-parameter models.
-
-```R
-model2 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
-               model="LinearRegressionWeakPriors.bug",
-            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
-
-# Or if you need to use JAGS on Mac
-model2 <- jags.model(file="LinearRegressionWeakPriors.bug", data=mr.data, inits=inits,
-                     n.chains = 1)
-```
-
-If you are running on WinBUGS, the model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the 'confidence intervals' used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
-
-```R
-model2
-# Inference for Bugs model at "LinearRegressionUninformativePriors.bug", fit using WinBUGS,
-#  1 chains, each with 1200 iterations (first 200 discarded)
-#  n.sims = 1000 iterations saved
-#           mean  sd 2.5%  25%  50%  75% 97.5%
-# intercept  3.0 0.0  2.9  3.0  3.0  3.0   3.0
-# slope      0.7 0.0  0.6  0.6  0.7  0.7   0.7
-# sd         0.2 0.0  0.2  0.2  0.2  0.2   0.3
-# deviance  45.8 2.3 43.1 44.1 45.2 46.9  51.8
-# 
-# DIC info (using the rule, pD = Dbar-Dhat)
-# pD = 2.9 and DIC = 48.7
-# DIC is an estimate of expected predictive error (lower deviance is better).
-```
-
-The precision of the values printed in the overall table is not very high. If we display just the summary of the parameter values (which gives higher precision), you will see that the parameter estimates are very similar to those obtained by the linear model, above:
-
-```R
-model2$summary
-#                 mean          sd      2.5%       25%     50%     75%      97.5%
-# intercept  2.9599600 0.007610540  2.945000  2.955000  2.9600  2.9650  2.9740000
-# slope      0.6529784 0.005656686  0.642395  0.649175  0.6531  0.6566  0.6645025
-# sd         0.2458753 0.004657877  0.237000  0.242800  0.2457  0.2492  0.2553025
-# deviance  45.9723500 2.537637046 43.149750 44.160000 45.2200 47.0650 52.4512494
-```
-
-If you are running on JAGS, you need to use a separate function to sample from the posterior parameter values. We will take 1000 samples from the posterior values in the MCMC chain:
-
-```R
-coef.samples <- jags.samples(model = model2,variable.names = c("intercept","slope","sd"),1000)
-```
-
-Then we need to manually calculate the posterior means, medians and credible intervals for each of the parameters:
-
-```R
-coef.estimates <- with(coef.samples,rbind(
-  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
-  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
-  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
-))
-row.names(coef.estimates) <- c("intercept","slope","sd")
-
-# Now display these estimates
-coef.estimates
-#                mean      2.5%    median    97.5%
-# intercept 2.9598977 2.9455276 2.9599261 2.974921
-# slope     0.6531842 0.6415785 0.6531705 0.664649
-# sd        0.2460361 0.2369341 0.2461339 0.255231
-```
-
-You will see that the parameter estimates are very similar, but not identical, to the estimates produced by BUGs.
-
-Now let us suppose that we have information strongly suggesting a particular value of the slope parameter. For the sake of argument, let's assume that this is the value of 0.75 predicted by metabolic theory. We can refit the model, but this time inserting the value of 0.75, with a high precision, into the prior distribution for the slope parameter.
-
-```R
-sink("LinearRegressionStrongSlopePrior.bug")
-cat("
-    model {
-        # Prior probabilities (note very low precision)
-        intercept ~ dnorm(0,0.001)
-		# We will use a prior probability distribution with a mean of 0.75
-		# and a precision corresponding to a standard deviation of 0.005
-        slope ~ dnorm(0.75,40000)
-        sd ~ dunif(0,100)
-        # Likelihood
-        for (i in 1:n){
-            y[i] ~ dnorm(mu[i],tau)
-            mu[i] <- intercept + slope*x[i]
-        }    
-        # Calculate precision parameter from standard deviation
-        tau <- 1/(sd*sd)
-    }
-    ", fill=TRUE)
-sink() 
-
-model3 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
-               model="LinearRegressionStrongSlopePrior.bug",
-            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
-
-# Or if you need to use JAGS on Mac
-model3 <- jags.model(file="LinearRegressionStrongSlopePrior.bug", data=mr.data, inits=inits,
-                     n.chains = 1)
-```
-
-If you are running WinBUGS on Windows, print out the model:
-
-```R
-model3$summary
-#                  mean           sd        2.5%      25%      50%      75%       97.5%
-# intercept   3.0024470  0.007090661   2.9890000   2.9980   3.0030   3.0070   3.0160000
-# slope       0.7089608  0.003823863   0.7015975   0.7063   0.7090   0.7115   0.7166025
-# sd          0.2535648  0.004488158   0.2454975   0.2504   0.2535   0.2566   0.2624000
-# deviance  140.5949000 12.702438976 117.3974990 131.5000 140.4000 148.8500 166.4199533
-```
-
-Alternatively if you are running JAGS, you will need to sample from the posterior parameter estimates manually:
-
-```R
-coef.samples <- jags.samples(model = model3,variable.names = c("intercept","slope","sd"),1000)
-
-coef.estimates <- with(coef.samples,rbind(
-  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
-  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
-  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
-))
-row.names(coef.estimates) <- c("intercept","slope","sd")
-
-# Now display these estimates
-coef.estimates
-#                mean      2.5%    median     97.5%
-# intercept 3.0027276 2.9891472 3.0028965 3.0162356
-# slope     0.7090535 0.7017819 0.7089133 0.7168327
-# sd        0.2536759 0.2443110 0.2534583 0.2638492
-```
-
-You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
-
-Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
-
-## Exercise 4: Land use impacts on biodiversity - Mixed-effects models
+## Exercise 3: Land use impacts on biodiversity - Mixed-effects models
 
 In this exercise, we will use the PREDICTS data (discussed in the lecture) to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations ('sites'), in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
 
@@ -808,6 +405,248 @@ PlotGLMERContinuous(model = richModelSelect$model,data = richModelSelect$data,
 ```
 
 If you have time, you could consider experimenting with your own models. Perhaps you could include the effects of land-use intensity, or consider interactions among the explanatory variables. Let me know if you need a hand trying these things.
+
+## Exercise 4: Metabolic Rates - Bayesian Models (If you have time, and are feeling adventurous)
+
+For this exercise, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Remember from the lecture that metabolic rates scale as a power function of body mass - much more of this tomorrow. In Hudson et al.'s data, there are often estimates for several individuals of a species, but sometimes only for one.
+
+First, load the necessary packages and data:
+
+```R
+library(MResModelling)
+data(HudsonFMR)
+```
+
+To make it easier to specify the models later, we will first create duplicates of the data columns with simpler names:
+
+```R
+HudsonFMR$mass <- HudsonFMR$M_kg
+HudsonFMR$fmr <- HudsonFMR$FMR_kJ_per_day
+```
+
+The models will be run from within R, but call the WinBUGS program externally. You will need to download and install this program (instructions and the installers can be found <a href="http://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/">here</a>. The method used to install WinBUGS depends whether you have a 32-bit or 64-bit computer. If you need help, just give me a shout.
+
+If you are running a computer with an operating system other than Windows, you will need to install JAGS instead. This software can be downloaded <a href="https://sourceforge.net/projects/mcmc-jags/">here</a>.
+
+Before we start with the Bayesian models, let's run a linear model of (log) metabolic rate as a function of (log) body mass:
+
+```R
+model1 <- lm(log10(fmr)~log10(mass),data=HudsonFMR)
+
+model1
+# Call:
+# lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
+# 
+# Coefficients:
+# (Intercept)  log10(mass)  
+#      2.9596       0.6528
+
+summary(model1)
+# Call:
+#   lm(formula = log10(fmr) ~ log10(mass), data = HudsonFMR)
+# 
+# Residuals:
+#   Min       1Q   Median       3Q      Max 
+# -1.03553 -0.14913  0.03124  0.16596  0.63925 
+# 
+# Coefficients:
+#   Estimate Std. Error t value Pr(>|t|)    
+# (Intercept) 2.959603   0.007681   385.3   <2e-16 ***
+#   log10(mass) 0.652813   0.005660   115.3   <2e-16 ***
+#   ---
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 0.2456 on 1496 degrees of freedom
+# Multiple R-squared:  0.8989,	Adjusted R-squared:  0.8989 
+# F-statistic: 1.33e+04 on 1 and 1496 DF,  p-value: < 2.2e-16
+```
+
+In order to run Bayesian models (using the Gibbs sampler), we will use the package 'R2WinBUGS':
+
+```R
+library(R2WinBUGS)
+```
+
+First, set up the x and y variables, and a variable for the number of observations:
+
+```R
+x <- log10(HudsonFMR$mass)
+y <- log10(HudsonFMR$fmr)
+
+n <- length(x)
+```
+
+We need to create a text file (.bug extension) that describes the model (likelihood function and prior probabilities for the parameters). We can do this using the 'sink' function in R. We will start with a model that has very weak prior probabilities (i.e. the data will dictate the posterior probabilities) - see the <a href="">lecture slides</a> for a reminder of prior and posterior probabilities. We will assume a normal prior distribution for the slope and intercept parameters with means of zero and very low precision (i.e. very high standard deviation). Note that the 'dnorm' function in WinBUGS, unlike its counterpart in R, uses a precision parameter (1/variance or 1/(standard deviation)<sup>2</sup>) instead of standard deviation itself. We will convert back to standard deviation in the model, for comparability with the linear model above. For the prior probability for the standard deviation parameter we will use a uniform distribution, because we need to prevent the sampler from trying values less than zero (this would lead to errors of course).
+
+```R
+sink("LinearRegressionWeakPriors.bug")
+cat("
+    model {
+    	# Prior probabilities (note very low precision)
+    	intercept ~ dnorm(0,0.001)
+    	slope ~ dnorm(0,0.001)
+    	sd ~ dunif(0,100)
+    	# Likelihood
+    	for (i in 1:n){
+    		y[i] ~ dnorm(mu[i],tau)
+    		mu[i] <- intercept + slope*x[i]
+    	}    
+    	# Calculate precision parameter from standard deviation
+    	tau <- 1/(sd*sd)
+    }
+    ", fill=TRUE)
+sink() 
+```
+
+Now we need to define the data and parameters, and set initial values for the parameters:
+
+```R
+# Define the data
+mr.data <- list("x","y","n")
+# Or if you are running JAGS on Mac
+mr.data <- list('x'=x, 'y'=y,'n'=n)
+
+
+# Define the parameters
+params <- c("intercept","slope","sd")
+
+# Set initial values for the parameters
+inits <- list(list(intercept=0,slope=0,sd=1))
+```
+
+Now we can run the model. We will run just one parameter chain for now. Running multiple parameter chains (with different starting parameter values) can be useful to make sure that the optimizer doesn't get stuck in local minima in the likelihood surface. This is more likely with more complex, multi-parameter models.
+
+```R
+model2 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
+               model="LinearRegressionWeakPriors.bug",
+            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+
+# Or if you need to use JAGS on Mac
+model2 <- jags.model(file="LinearRegressionWeakPriors.bug", data=mr.data, inits=inits,
+                     n.chains = 1)
+```
+
+If you are running on WinBUGS, the model returns the posterior means of the sampling distributions for each parameter, the 'credible intervals' for each parameter (these are conceptually different to the 'confidence intervals' used in classical frequentist statistics), and some information about overall model fit (DIC is often used to compare Bayesian models; it is an analogue to the AIC used in standard statistical models).
+
+```R
+model2
+# Inference for Bugs model at "LinearRegressionUninformativePriors.bug", fit using WinBUGS,
+#  1 chains, each with 1200 iterations (first 200 discarded)
+#  n.sims = 1000 iterations saved
+#           mean  sd 2.5%  25%  50%  75% 97.5%
+# intercept  3.0 0.0  2.9  3.0  3.0  3.0   3.0
+# slope      0.7 0.0  0.6  0.6  0.7  0.7   0.7
+# sd         0.2 0.0  0.2  0.2  0.2  0.2   0.3
+# deviance  45.8 2.3 43.1 44.1 45.2 46.9  51.8
+# 
+# DIC info (using the rule, pD = Dbar-Dhat)
+# pD = 2.9 and DIC = 48.7
+# DIC is an estimate of expected predictive error (lower deviance is better).
+```
+
+The precision of the values printed in the overall table is not very high. If we display just the summary of the parameter values (which gives higher precision), you will see that the parameter estimates are very similar to those obtained by the linear model, above:
+
+```R
+model2$summary
+#                 mean          sd      2.5%       25%     50%     75%      97.5%
+# intercept  2.9599600 0.007610540  2.945000  2.955000  2.9600  2.9650  2.9740000
+# slope      0.6529784 0.005656686  0.642395  0.649175  0.6531  0.6566  0.6645025
+# sd         0.2458753 0.004657877  0.237000  0.242800  0.2457  0.2492  0.2553025
+# deviance  45.9723500 2.537637046 43.149750 44.160000 45.2200 47.0650 52.4512494
+```
+
+If you are running on JAGS, you need to use a separate function to sample from the posterior parameter values. We will take 1000 samples from the posterior values in the MCMC chain:
+
+```R
+coef.samples <- jags.samples(model = model2,variable.names = c("intercept","slope","sd"),1000)
+```
+
+Then we need to manually calculate the posterior means, medians and credible intervals for each of the parameters:
+
+```R
+coef.estimates <- with(coef.samples,rbind(
+  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
+  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
+  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
+))
+row.names(coef.estimates) <- c("intercept","slope","sd")
+
+# Now display these estimates
+coef.estimates
+#                mean      2.5%    median    97.5%
+# intercept 2.9598977 2.9455276 2.9599261 2.974921
+# slope     0.6531842 0.6415785 0.6531705 0.664649
+# sd        0.2460361 0.2369341 0.2461339 0.255231
+```
+
+You will see that the parameter estimates are very similar, but not identical, to the estimates produced by BUGs.
+
+Now let us suppose that we have information strongly suggesting a particular value of the slope parameter. For the sake of argument, let's assume that this is the value of 0.75 predicted by metabolic theory. We can refit the model, but this time inserting the value of 0.75, with a high precision, into the prior distribution for the slope parameter.
+
+```R
+sink("LinearRegressionStrongSlopePrior.bug")
+cat("
+    model {
+        # Prior probabilities (note very low precision)
+        intercept ~ dnorm(0,0.001)
+		# We will use a prior probability distribution with a mean of 0.75
+		# and a precision corresponding to a standard deviation of 0.005
+        slope ~ dnorm(0.75,40000)
+        sd ~ dunif(0,100)
+        # Likelihood
+        for (i in 1:n){
+            y[i] ~ dnorm(mu[i],tau)
+            mu[i] <- intercept + slope*x[i]
+        }    
+        # Calculate precision parameter from standard deviation
+        tau <- 1/(sd*sd)
+    }
+    ", fill=TRUE)
+sink() 
+
+model3 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
+               model="LinearRegressionStrongSlopePrior.bug",
+            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+
+# Or if you need to use JAGS on Mac
+model3 <- jags.model(file="LinearRegressionStrongSlopePrior.bug", data=mr.data, inits=inits,
+                     n.chains = 1)
+```
+
+If you are running WinBUGS on Windows, print out the model:
+
+```R
+model3$summary
+#                  mean           sd        2.5%      25%      50%      75%       97.5%
+# intercept   3.0024470  0.007090661   2.9890000   2.9980   3.0030   3.0070   3.0160000
+# slope       0.7089608  0.003823863   0.7015975   0.7063   0.7090   0.7115   0.7166025
+# sd          0.2535648  0.004488158   0.2454975   0.2504   0.2535   0.2566   0.2624000
+# deviance  140.5949000 12.702438976 117.3974990 131.5000 140.4000 148.8500 166.4199533
+```
+
+Alternatively if you are running JAGS, you will need to sample from the posterior parameter estimates manually:
+
+```R
+coef.samples <- jags.samples(model = model3,variable.names = c("intercept","slope","sd"),1000)
+
+coef.estimates <- with(coef.samples,rbind(
+  c(mean=mean(intercept),quantile(intercept,0.025),median=median(intercept),quantile(intercept,0.975)),
+  c(mean=mean(slope),quantile(slope,0.025),median=median(slope),quantile(slope,0.975)),
+  c(mean=mean(sd),quantile(sd,0.025),median=median(sd),quantile(sd,0.975))
+))
+row.names(coef.estimates) <- c("intercept","slope","sd")
+
+# Now display these estimates
+coef.estimates
+#                mean      2.5%    median     97.5%
+# intercept 3.0027276 2.9891472 3.0028965 3.0162356
+# slope     0.7090535 0.7017819 0.7089133 0.7168327
+# sd        0.2536759 0.2443110 0.2534583 0.2638492
+```
+
+You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
+
+Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
 
 ## References
 
