@@ -1,0 +1,2 @@
+
+MammalRich <- readRDS("EgyptMammalRichness.rds")
