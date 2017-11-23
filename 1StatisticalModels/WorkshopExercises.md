@@ -28,7 +28,7 @@ install_github("timnewbold/StatisticalModels")
 install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
 ```
 
-## Exercise 1: Functional responses - Maximum Likelihood Estimation
+## Exercise 1: Functional responses - Linear Models and Maximum Likelihood Estimation
 
 In this exercise, we will use data on predator functional responses (remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> that these describe the relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
 
@@ -175,7 +175,32 @@ preds$Killed <- preds$Initial *
 points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
 ```
 
-## Exercise 2: Generalized linear models
+## Exercise 2: Land use impacts on Hymenoptera in Hawaii - Generalized linear models
+
+For this section, you will be working with the data on hymenopterans in different land uses in Hawaii, which I described in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>.
+
+These data form one of the studies in the PREDICTS database, which I also discussed earlier, and which you will be working with later.
+
+First, load my R package associated with these sessions:
+
+```R
+library(MResModelling)
+```
+
+Now, load in the Hawaii data describing the abundance of all species:
+
+```R
+data(HawaiiHymenoptera)
+```
+
+We will work with the data for just one species:
+
+```R
+hh.sp <- droplevels(hh[(hh$Taxon_name_entered=="Pimpla punicipes"),])
+```
+
+The abundance data (given in the column called 'Measurement') have their own particular problems. Perhaps try plotting a histogram of these data, and thinking about what the problems might be. For now we will analyze species presence or absence. To do so we will create a new column with values of 1 where abundance is greater than zero, and values of 0 otherwise (i.e. where the species is absent):
+
 
 
 ## Exercise 3: Land use impacts on biodiversity - Mixed-effects models
