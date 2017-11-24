@@ -179,7 +179,7 @@ points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
 
 For this section, you will be working with the data on hymenopterans in different land uses in Hawaii, which I described in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>.
 
-These data form one of the studies in the PREDICTS database, which I also discussed earlier, and which you will be working with later.
+These data form one of the studies in the PREDICTS database, which I also discussed earlier, and which you will be working with later. This particular study sampled hymenopteran species in 754 different locations in three different land uses (primary vegetation, secondary vegetation and pastures).
 
 First, load my R package associated with these sessions:
 
@@ -201,13 +201,140 @@ hh.sp <- droplevels(hh[(hh$Taxon_name_entered=="Pimpla punicipes"),])
 
 The abundance data (given in the column called 'Measurement') have their own particular problems. Perhaps try plotting a histogram of these data, and thinking about what the problems might be. For now we will analyze species presence or absence. To do so we will create a new column with values of 1 where abundance is greater than zero, and values of 0 otherwise (i.e. where the species is absent):
 
+```R
+hh.sp$PresAbs <- ifelse(hh.sp$Measurement>0,1,0)
+```
 
+Before we run any models, we will plot the data as I did in the lecture:
+
+```R
+# The first line of code just tabulates the presences and absences by land use
+presabs.counts <- table(hh.sp$Occur,hh.sp$LandUse)
+
+# The next line divides the counts through by the column sums to calculate proportions
+presabs.props <- sweep(presabs.counts,2,colSums(presabs.counts),'/')
+
+# This line reorders the table, so that presences come before absences, and the land uses are in a logical order (primary vegetation followed by secondary vegetation followed by pasture)
+presabs.props <- presabs.props[c(2,1),c(1,3,2)]
+
+# Finally, we create a barplot of the proportions
+barplot(presabs.props,col=c("#1b9e77","#d95f02"),las=1,ylab="Proportion of sites")
+```
+
+It looks from this plot that this species, <i>Pimpla punicipes</i>, is less likely to occur in secondary vegetation than in primary vegetation, and very unlikely to occur in pasture. But we will run a generalized linear model to check this:
+
+```R
+# Run a model of species presence or absence as a function of land use
+m1 <- glm(PresAbs~LandUse,data=hh.sp,family=binomial)
+
+print(summary(m1))
+
+# Also, run a null model (with just an intercept) with which to compare our land-use model
+m0 <- glm(PresAbs~1,data=hh.sp,family=binomial)
+```
+
+Looking at the output of model 1 seems to confirm the pattern in presence and absence observed in the data. We can plot an error bar to show the modelled result:
+
+```R
+# First, create a set of data with the land uses we want to show
+nd <- data.frame(LandUse=c("Primary","Secondary","Pasture"))
+# Now predict probability of presence for these land uses, including standard error
+preds <- predict(object=m1,newdata=nd,se.fit=TRUE)
+# Calculate the mean predicted value for each land use, back transforming the values using the inverse of the link function (for a binomial GLM, the default link function is logit)
+y <- 1/(1+exp(-(preds$fit)))
+# Now calculate the upper and lower confidence limits (multiplying by 1.96 gives 95% confidence limits)
+yplus <- 1/(1+exp(-(preds$fit+1.96*preds$se.fit)))
+yminus <- 1/(1+exp(-(preds$fit-1.96*preds$se.fit)))
+# Finally, plot the error bar with the mean and confidence limits of the model predictions for each land use
+errbar(x=nd$LandUse,y=y,yplus=yplus,yminus=yminus)
+```
+
+Now do an analysis of variance to compare the two models:
+
+```R
+anova(m0,m1,test="Chi")
+```
+
+This shows that the model including land use is significantly better than the null model. So land use does have a significant effect on the presence or absence of this species at this particular study location in Hawaii. 
+
+Finally, though, let's find out how much of the variation in species presence or absence is explained by land use as a measure of fit of the model. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>, that explained variation in a GLM is (null deviance - residual deviance)/null deviance.
+
+```R
+with(m1,(null.deviance-deviance)/null.deviance)
+# Note that residual deviance is labelled simply 'deviance' in the model object.
+```
+
+This shows that our model explains only around 5% of the variation in species presence or absence. So land use has a significant effect on the species, but clearly there are other (unmeasured) factors that determine to a large extent whether or not the species is present and is detected at each location in the dataset.
+
+Now we will work with data on the counts of all hymenopteran species at the 754 sampled sites in Hawaii:
+
+```R
+data(HawaiiHymenopteraSites)
+```
+
+We will work with the species richness data. First, produce a boxplot of species richness as a function of land use:
+
+```R
+boxplot(Species_richness~LandUse,data=hhs)
+```
+
+This suggests that there might be differences in species richness among the different land uses, but we produce some models to test this possibility.
+
+But first, let's inspect the distribution of the species richness data:
+
+```R
+hist(hhs$Species_richness)
+```
+
+Clearly the species richness data are not normally distributed. Because species richness values are counts, it would be reasonable to start with a GLM with a Poisson error distribution.
+
+```R
+# Model species richness as a function of land use
+m1 <- glm(Species_richness~LandUse,data=hhs,family=poisson)
+
+print(summary(m1))
+
+# Also run a null, intercept-only model
+m0 <- glm(Species_richness~1,data=hhs,family=poisson)
+```
+
+As before, we will plot an error bar to show the modelled result:
+
+```R
+# First, create a set of data with the land uses we want to show
+nd <- data.frame(LandUse=c("Primary","Secondary","Pasture"))
+# Now predict probability of presence for these land uses, including standard error
+preds <- predict(object=m1,newdata=nd,se.fit=TRUE)
+# Calculate the mean predicted value for each land use, back transforming the values using the inverse of the link function (this time, because we ran a Poisson GLM, the model used a log link function)
+y <- exp(preds$fit)
+# Now calculate the upper and lower confidence limits (multiplying by 1.96 gives 95% confidence limits)
+yplus <- exp(preds$fit+1.96*preds$se.fit)
+yminus <- exp(preds$fit-1.96*preds$se.fit)
+# Finally, plot the error bar with the mean and confidence limits of the model predictions for each land use
+errbar(x=nd$LandUse,y=y,yplus=yplus,yminus=yminus)
+```
+
+So in this case, the model shows that species richness is, on average, slightly higher in secondary vegetation than in primary vegetation, but much lower in pasture than in either of the natural land-use tpyes.
+
+Again, do an analysis of variance to compare the land-use model with the null model:
+
+```R
+anova(m0,m1,test="Chi")
+```
+
+As with the model of the presence or absence of the individual species, the model including land use is highly significantly better than the null model. But again, let's see how much of the variation in species richness land use explains:
+
+```R
+with(m1,(null.deviance-deviance)/null.deviance)
+```
+
+So land use explains nearly 17% of the variation in species richness. That's a lot for a single explanatory variable. 
 
 ## Exercise 3: Land use impacts on biodiversity - Mixed-effects models
 
-In this exercise, we will use the PREDICTS data (discussed in the lecture) to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations ('sites'), in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
+In this exercise, we will use the full PREDICTS database to construct models relating the biodiversity of local ecological communities to land use. These data were described in Hudson et al. (2014), and released with Newbold et al. (2016). The data describe the total abundance and species richness sampled at over 18,000 locations ('sites'), in different land uses, around the world. The data were drawn from 573 published studies of land use impacts on biodiversity. 
 
-Each of these studies was conducted in a different geographical location, with different sampling protocols, and with different levels of sampling effort. It would be inappropriate to construct a simple linear model that ignores this hierarchical structure. Therefore, we will be using mixed-effects models.
+Each of the underlying studies (of which the study in the last exercise was one) was conducted in a different geographical location, with different sampling protocols, and with different levels of sampling effort. It would be inappropriate to construct a simple linear or generalized linear model that ignores this hierarchical structure. Therefore, we will be using mixed-effects models.
 
 First, load my StatisticalModels package, and read in the site-level data from Newbold et al. (2016):
 
