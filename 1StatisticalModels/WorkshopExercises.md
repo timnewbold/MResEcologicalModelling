@@ -88,11 +88,21 @@ linearNLL <- function(killed,init,m,c,sd){
   # The next line calculates the likelihood for this model
   # assuming that the residuals are a normal distribution
   # around 0 (as in a linear regression)
+  # The 'dnorm' function calculates the probability density
+  # for a given observed value (x) compared to a normal
+  # distribution with a given mean and standard deviation (sd)
   suppressWarnings(-sum(dnorm(x = killed,mean = y.pred,sd = sd,log = TRUE)))
   
 }
 
 # Now we run the maximum likelihood estimation
+# This will estimate the values of three parameters:
+# the slope (m) and intercept(c) of the regression,
+# plus the residual error term (sd). For These# parameters,
+# we specify reasonable starting values.
+# We also pass two variables (our response and 
+# explanatory variables): intial prey density 
+# and the number killed
 m2 <- mle2(minuslogl = linearNLL,start = list(m=0.2,c=2,sd=1),
            data = list(init=ReedfrogFuncresp$Initial,
                        killed=ReedfrogFuncresp$Killed))
@@ -122,20 +132,20 @@ Now we will fit the more complex 'Type II' functional response model to the data
 # As before, we first need to define the likelihood function
 binomLL <- function(killed,init,p){
   
-  # The next two lines just specify that the first parameter we pass
-  # will be the attack rate, and the second the handling time
+  # The next two lines just specify that of the parameters we pass (p), 
+  # the first will be attack rate (a), and the second the handling time (h)
   a = p[1]
   h = p[2]
   
   # This line defines the probability of a prey individual being killed
-  # Note this is the equation for the number killed above, divided by
+  # Note this is the Type II functional response equation from above, divided by
   # the intial number of prey
   pkilled <- a/(1+a*h*init)
   
-  # The likelihood in this case is a binomial probability distribution
-  # with the observed number of kills from a total potential number of kills
-  # equal to the initial number of prey, and probability of being killed equal
-  # from above
+  # The likelihood in this case assumes that the observed number 
+  # of kills is a binomial draw where the number of trials is
+  # the initial number of prey, and the probability of being killed
+  # is taken from above
   -sum(dbinom(x = killed,size = init,prob = pkilled,log = TRUE))
   
 }
@@ -193,7 +203,7 @@ Now, load in the Hawaii data describing the abundance of all species:
 data(HawaiiHymenoptera)
 ```
 
-We will work with the data for just one species:
+We will work with the data for just one species, <i>Pimpla punicipes</i>:
 
 ```R
 hh.sp <- droplevels(hh[(hh$Taxon_name_entered=="Pimpla punicipes"),])
@@ -214,14 +224,19 @@ presabs.counts <- table(hh.sp$Occur,hh.sp$LandUse)
 # The next line divides the counts through by the column sums to calculate proportions
 presabs.props <- sweep(presabs.counts,2,colSums(presabs.counts),'/')
 
-# This line reorders the table, so that presences come before absences, and the land uses are in a logical order (primary vegetation followed by secondary vegetation followed by pasture)
+# This line reorders the table, so that presences come before absences, 
+# and the land uses are in a logical order (primary vegetation followed 
+# by secondary vegetation followed by pasture)
 presabs.props <- presabs.props[c(2,1),c(1,3,2)]
 
 # Finally, we create a barplot of the proportions
+# (green for presence, orange for absence)
 barplot(presabs.props,col=c("#1b9e77","#d95f02"),las=1,ylab="Proportion of sites")
 ```
 
 It looks from this plot that this species, <i>Pimpla punicipes</i>, is less likely to occur in secondary vegetation than in primary vegetation, and very unlikely to occur in pasture. But we will run a generalized linear model to check this:
+
+Because the response variable that we are interested in (species presence or absence) is a binary variable, it most appropriate to use a GLM that assumes a binomial distribution of errors.
 
 ```R
 # Run a model of species presence or absence as a function of land use
@@ -233,14 +248,21 @@ print(summary(m1))
 m0 <- glm(PresAbs~1,data=hh.sp,family=binomial)
 ```
 
-Looking at the output of model 1 seems to confirm the pattern in presence and absence observed in the data. We can plot an error bar to show the modelled result:
+Looking at the output of model 1 seems to confirm the pattern in presence and absence observed when we plotted the data.
+
+In the coefficient table that was displayed when you ran print(summary(m1)), the first line ('(Intercept)'), gives the coefficient estimate for the reference land use (primary vegetation). All of the coefficients are transformed using the link function (logit in this case - see below for transforming back to probabilities). The other coefficients describe the difference compared with primary vegetation in the (transformed) probabilities for the other land uses. You will see that the coefficients for both secondary vegetation and especially for pasture are significantly lower than primary vegetation.
+
+We can plot an error bar to show the modelled result:
 
 ```R
-# First, create a set of data with the land uses we want to show
+# First, create a set of data giving just the land uses we want to show
 nd <- data.frame(LandUse=c("Primary","Secondary","Pasture"))
 # Now predict probability of presence for these land uses, including standard error
 preds <- predict(object=m1,newdata=nd,se.fit=TRUE)
-# Calculate the mean predicted value for each land use, back transforming the values using the inverse of the link function (for a binomial GLM, the default link function is logit)
+# Calculate the mean predicted value for each land use, 
+# back transforming the values using the inverse of the 
+# link function (for a binomial GLM, the default link 
+# function is logit)
 y <- 1/(1+exp(-(preds$fit)))
 # Now calculate the upper and lower confidence limits (multiplying by 1.96 gives 95% confidence limits)
 yplus <- 1/(1+exp(-(preds$fit+1.96*preds$se.fit)))
@@ -249,7 +271,7 @@ yminus <- 1/(1+exp(-(preds$fit-1.96*preds$se.fit)))
 errbar(x=nd$LandUse,y=y,yplus=yplus,yminus=yminus)
 ```
 
-Now do an analysis of variance to compare the two models:
+Now do an analysis of variance to compare the model with land use to the null model:
 
 ```R
 anova(m0,m1,test="Chi")
@@ -264,7 +286,7 @@ with(m1,(null.deviance-deviance)/null.deviance)
 # Note that residual deviance is labelled simply 'deviance' in the model object.
 ```
 
-This shows that our model explains only around 5% of the variation in species presence or absence. So land use has a significant effect on the species, but clearly there are other (unmeasured) factors that determine to a large extent whether or not the species is present and is detected at each location in the dataset.
+This shows that our model explains only around 5% of the variation in species presence or absence. So land use has a significant effect on the species, but clearly there are other factors (not considered in this model) that determine to a large extent whether or not the species is present and is detected at each location in the dataset.
 
 Now we will work with data on the counts of all hymenopteran species at the 754 sampled sites in Hawaii:
 
@@ -353,44 +375,50 @@ PREDICTSSites$LandUse <- factor(PREDICTSSites$LandUse,
 
 The other variables that we will consider are human population density and distance to nearest road. The imported data table already contains log-transformed versions of these variables, rescaled to have values between 0 and 1: logHPD.rs and logDistRd.rs, respectively.
 
-In this exercise, we will switch to using some functions I have written for easily creating mixed-effects models.
-
-When we fitted mixed-effects models in Exercise 2 above, we used a very simple random-effects structure including only the study from which the data were taken. We certainly want to include study in these models too, because we expect sampled biodiversity to vary considerably among studies owing to differences in sampling methods and sampling effort (in this dataset, study identity designated as 'SS'):
+We will start by modelling (log-transformed) total abundance, using a linear mixed-effects model (i.e. assuming a normal distribution of errors). First, we must decide which random effects to include in the model. As a minimum, we will include study identity in these models, because we expect sampled biodiversity to vary considerably among studies owing to differences in sampling methods and sampling effort (in this dataset, study identity designated as 'SS'):
 
 ```R
-random1 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = "gaussian",
-                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
-                 randomStruct = "(1|SS)")
+# We need to create a modelling dataset without NAs,
+# because the mixed-effects modelling functions don't handle NAs
+# First, select the variables we will include in the models
+# (I have included some extra terms that we will consider later)
+model.data <- PREDICTSSites[,c('LogAbund','LandUse','logHPD.rs','logDistRd.rs','SS','SSB')]
+# Second, remove NA values
+model.data <- na.omit(model.data)
+
+# Fixed effects are specified as in a normal linear model,
+# Random effects are specified as e.g. (1|random_term)+(1|random_term2)
+random1 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS),
+				data=model.data)
 ```
 
-Note that we have included in this model land use, and also quadratic polynomial terms for both human population density and distance to nearest road. It is customary to compare different random-effects structures before comparing models with different fixed effects, and while doing so to use the most complex combination of fixed effects that will be considered (here land use plus human population density plus distance to nearest road).
+Note that we have included in this model land use, and also quadratic polynomial terms for both human population density and distance to nearest road. The quadratic terms are specified as poly(variable,2);  poly(variable,1) would fit a linear term. It is customary to compare different random-effects structures before comparing models with different fixed effects, and while doing so to use the most complex combination of fixed effects that will be considered (here land use plus human population density plus distance to nearest road).
  
 In the PREDICTS data there is also sometimes spatial structuring of sites within studies (for example, if the authors of the original papers sampled sites arranged in spatial blocks within a landscape). Therefore, we might also consider a term to account for this structuring (there is one in the PREDICTS data: 'SSB').
 
-If two factors that you want to include are overlapping then they are referred to as 'crossed'. For example, in the analysis of metabolic rates in Exercise 2, a species could be sampled in multiple studies, and therefore study and species identity were 'crossed' random effects. 
+If two factors that you want to include are overlapping then they are referred to as 'crossed'.
 
 An alternative structure to the data is to have nested random effects. The case of spatial blocks within studies in the PREDICTS data is an example - a particular spatial block can only belong to one study. In this case, there are two ways to fit the random-effects structure. Sometimes the factors are specified in a way that doesn't account for their nestedness. For example, if there were 4 spatial blocks numbered 1 to 4 in one study, and 5 spatial blocks numbered 1 to 5 in a second study. In this case, the model has no way to know that block 1 in study 1 shouldn't be treated as being the same as block 1 in study 2. The hierarchical nature of the random effect must then be specified in the model as follows: (1|SS/SSB). Alternatively the hierarchical structure can be accounted for in the specification of the variables, for example by naming the spatial blocks 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, and 2.5, where the first number indicates the identity of the study. In this case, the random effects can be specified either in the nested fashion (1|SS/SSB) or in the same way as crossed random effects (1|SS)+(1|SSB). This latter approach is easier to work with and is the way we will use with the PREDICTS data (where the nested random effects were specified in the data).
 
 ```R
-random2 <- GLMER(modelData = PREDICTSSites,responseVar = "LogAbund",fitFamily = "gaussian",
-                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
-                 randomStruct = "(1|SS)+(1|SSB)")
+random2 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB),
+				data=model.data)
 ```
 
 If we compare the AIC values of these two models, we can see that the one including the effect of spatial structure of sites within studies is strongly supported over the one that includes only variation among studies:
 
 ```R
-AIC(random1$model,random2$model)
+AIC(random1,random2)
 #               df      AIC
-# random1$model 12 34327.07
-# random2$model 13 33758.41
+# random1 12 34327.07
+# random2 13 33758.41
 ```
 
 If you look at the model output, in the column 'Std.Dev.' under 'Random effects:', you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
 
 
 ```R
-random2$model
+random2
 # Linear mixed model fit by REML ['lmerMod']
 # Formula: LogAbund ~ LandUse + poly(logHPD.rs, 2) + poly(logDistRd.rs,  
 #     2) + (1 | SS) + (1 | SSB)
@@ -404,7 +432,7 @@ random2$model
 # Number of obs: 13197, groups:  SSB, 1531; SS, 428
 ```
 
-Now we have identified our random-effects structure, we can select a combination of fixed effects that adequately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My GLMERSelect function in the StatisticalModels package does this for you. The call for this function separates categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
+Now we have identified our random-effects structure, we can select a combination of fixed effects that adequately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My GLMERSelect function in the StatisticalModels package does this for you. The call for this function separates out the random effects (specified via 'randomStruct'), and separates the categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
 
 ```R
 abundModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "LogAbund",
@@ -423,6 +451,22 @@ abundModelSelect$stats
 # 3 poly(logDistRd.rs,2) 9.262984e-01 1 , 13 3.358266e-01  -1.073702
 # 4    poly(logHPD.rs,1)           NA   <NA>           NA         NA
 # 5 poly(logDistRd.rs,1) 5.733462e-03 1 , 12 9.396422e-01  -1.994267
+```
+
+We can also look at the table of coefficient values from the model. From the table of fixed effects, we can see that total abundance is lower in all disturbed land uses compared with primary vegetation.
+
+```R
+summary(abundModelSelect$model)
+# Fixed effects:
+#                             Estimate Std. Error t value
+# (Intercept)                  4.64802    0.10964   42.39
+# LandUseSecondary Vegetation -0.06143    0.02734   -2.25
+# LandUsePlantation forest    -0.30047    0.03704   -8.11
+# LandUseCropland             -0.19307    0.03523   -5.48
+# LandUsePasture              -0.23594    0.03476   -6.79
+# LandUseUrban                -0.18907    0.06690   -2.83
+# poly(logHPD.rs, 2)1          1.27073    2.23698    0.57
+# poly(logHPD.rs, 2)2         -9.67027    1.89600   -5.10
 ```
 
 We can plot an error bar showing the land-use effects from the final model using the PlotGLMERFactor in my StatisticalModels package:
@@ -444,31 +488,32 @@ PlotGLMERContinuous(model = abundModelSelect$model,data = abundModelSelect$data,
                     logLink = "e")
 ```
 
-We have to specify all of the terms (factors and continuous effects) that were in the model to allow the function to plot. The 'otherFactors = list(LandUse="Primary Vegetation")' term specifies that we will plot predicted values for primary vegetation.
+For this function, you need to specify all of the terms (factors and continuous effects) that were in the model to allow the function to plot. The 'otherFactors = list(LandUse="Primary Vegetation")' term specifies that we will plot predicted values for primary vegetation.
 
 Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Observed species richness values commonly have a variance greater than the mean, a situation known as over-dispersion.
 
-There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as the negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these packages are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity.
+There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as a quasi-poisson or negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these packages are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (don't worry about why this is the case, but if you are interested see Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity ('SSBS' column in the dataset).
 
 But before we get onto this, let's compare the study-only and study-plus-spatial-block random-effects structures that we considered for the models of total abundance. You will probably receive warnings about model convergence, but these aren't too serious (the convergence value is close to the accepted threshold, and the functions in the lme4 package are very cautious about convergence).
 
 ```R
-randomR1 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
-                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
-                 randomStruct = "(1|SS)",REML = FALSE)
-randomR2 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
-                 fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
-                 randomStruct = "(1|SS)+(1|SSB)",REML = FALSE)
+model.data <- PREDICTSSites[,c('Species_richness','LandUse','logHPD.rs','logDistRd.rs','SS','SSB','SSBS')]
+model.data <- na.omit(model.data)
 
-AIC(randomR1$model,randomR2$model)
+# Here we will fit a <i>generalized<i> linear model, assuming a Poisson
+# distribution of errors
+randomR1 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS),family="poisson",data=model.data)
+randomR2 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB),family="poisson",data=model.data)
+
+AIC(randomR1,randomR2)
 #                df      AIC
-# randomR1$model 11 102591.5
-# randomR2$model 12 100695.0
+# randomR1 11 102591.5
+# randomR2 12 100695.0
 ```
 
 As with the models of total abundance, the random-effects structure that includes the effect of the spatial structure of sites is strongly favoured.
 
-One way to test for over-dispersion is to compare the residual deviance to the residual degrees of freedom of a model. If the deviance is much larger than the degrees of freedom, this is an indication of over-dispersion (there other possible reasons though). There is a function in the StatisticalModels package that does this:
+One way to test for over-dispersion is to compare the residual deviance to the residual degrees of freedom of a model. If the deviance is much larger than the degrees of freedom, this is an indication of over-dispersion (there other possible reasons though). There is a function in my StatisticalModels package that does this:
 
 ```R
 GLMEROverdispersion(model = randomR2$model)
@@ -485,23 +530,21 @@ GLMEROverdispersion(model = randomR2$model)
 # [1] 0
 ```
 
-The large ratio of residual deviance to residual degrees of freedom indicates the presence of over-dispersion (confirmed by the significant chi-square test). Therefore, we will try a random-effects structure with a nested effect of site, within spatial block, within study (warning, this will take a little time to run!):
+The large ratio of residual deviance to residual degrees of freedom indicates the presence of over-dispersion (confirmed by the significant chi-square test). Therefore, we will try a random-effects structure with a nested effect of site, within spatial block, within study. (warning, this will take a little time to run!):
 
 ```R
-randomR3 <- GLMER(modelData = PREDICTSSites,responseVar = "Species_richness",fitFamily = "poisson",
-                  fixedStruct = "LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)",
-                  randomStruct = "(1|SS)+(1|SSB)+(1|SSBS)",REML = FALSE)
+randomR3 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB)+(1|SSBS),family="poisson",data=model.data)
 
-AIC(randomR2$model,randomR3$model)
+AIC(randomR2,randomR3)
 #                df       AIC
-# randomR2$model 12 100695.04
-# randomR3$model 13  92211.73
+# randomR2 12 100695.04
+# randomR3 13  92211.73
 ```
 
 The comparison of AIC values suggests that the random-effects structure including site is strongly favoured, and re-running the over-dispersion test shows that including an observation-level random effect has removed the over-dispersion (in fact, there is now under-dispersion):
 
 ```R
-GLMEROverdispersion(model = randomR3$model)
+GLMEROverdispersion(model = randomR3)
 # $residDev
 # [1] 7448.711
 # 
@@ -536,6 +579,23 @@ richModelSelect$stats
 # 5 poly(logDistRd.rs,1)   5.042986 1 , 12 2.472584e-02   3.0429855
 ```
 
+Inspecting the table of coefficients shows us that, as with total abundance, species richness is lower in all land uses other than primary vegetation.
+
+```R
+summary(richModelSelect$model)
+# Fixed effects:
+#                             Estimate Std. Error z value Pr(>|z|)
+# (Intercept)                  2.65082    0.05338   49.66  < 2e-16 ***
+# LandUseSecondary Vegetation -0.08102    0.01260   -6.43 1.28e-10 ***
+# LandUsePlantation forest    -0.28044    0.01736  -16.16  < 2e-16 ***
+# LandUseCropland             -0.19997    0.01734  -11.54  < 2e-16 ***
+# LandUsePasture              -0.19540    0.01615  -12.10  < 2e-16 ***
+# LandUseUrban                -0.30949    0.03791   -8.16 3.25e-16 ***
+# poly(logHPD.rs, 2)1         -0.51224    1.23283   -0.42   0.6778
+# poly(logHPD.rs, 2)2         -6.21435    1.18608   -5.24 1.61e-07 ***
+# poly(logDistRd.rs, 1)        1.61161    0.70829    2.28   0.0229 *
+```
+
 Plotting the model shows the effects of land use, human population density and distance to nearest road:
 
 ```R
@@ -557,6 +617,8 @@ PlotGLMERContinuous(model = richModelSelect$model,data = richModelSelect$data,
 ```
 
 If you have time, you could consider experimenting with your own models. Perhaps you could include the effects of land-use intensity, or consider interactions among the explanatory variables. Let me know if you need a hand trying these things.
+
+Before you move onto the final exercise, make sure you are happy that you understand what you have done so far. You will not be assessed on Bayesian models, but if you have time it might be useful to have a go at them.
 
 ## Exercise 4: Metabolic Rates - Bayesian Models (If you have time, and are feeling adventurous)
 
@@ -671,7 +733,7 @@ Now we can run the model. We will run just one parameter chain for now. Running 
 ```R
 model2 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
                model="LinearRegressionWeakPriors.bug",
-            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+            bugs.directory = "C:/Users/tim_n/Documents/WinBUGS14/")
 
 # Or if you need to use JAGS on Mac
 model2 <- jags.model(file="LinearRegressionWeakPriors.bug", data=mr.data, inits=inits,
@@ -758,7 +820,7 @@ sink()
 
 model3 <- bugs(data=mr.data, inits = inits, parameters = params, n.chains = 1,
                model="LinearRegressionStrongSlopePrior.bug",
-            bugs.directory = "C:/Users/ucbttne/Documents/WinBUGS14/")
+            bugs.directory = "C:/Users/tim_n/Documents/WinBUGS14/")
 
 # Or if you need to use JAGS on Mac
 model3 <- jags.model(file="LinearRegressionStrongSlopePrior.bug", data=mr.data, inits=inits,
@@ -798,7 +860,7 @@ coef.estimates
 
 You will see that the estimate of the slope parameter from this model falls somewhere between the estimate we obtained before and the mean of the prior probability distribution we used.
 
-Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very, very bad idea.
+Our precision estimate was ridiculously high. Because the likelihood surface is quite steep, the data overwhelm the priors unless we use such a high precision on the priors. The influence of the priors would be greater if the likelihood profile were shallower, for example if the dataset being used were smaller. Nevertheless, you can hopefully see the dangers of using overly influential priors. Specifying informative priors can be useful if the study is building on previous work and thus if good quantitative prior estimates of a parameter can be used. But in extreme cases it could end up being pointless using the new dataset, and it could be very difficult to do anything but confirm our prior belief. Using prior probabilities to reflect a hunch about what a parameter's value should be is a very bad idea.
 
 ## References
 
