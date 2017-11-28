@@ -516,7 +516,7 @@ As with the models of total abundance, the random-effects structure that include
 One way to test for over-dispersion is to compare the residual deviance to the residual degrees of freedom of a model. If the deviance is much larger than the degrees of freedom, this is an indication of over-dispersion (there other possible reasons though). There is a function in my StatisticalModels package that does this:
 
 ```R
-GLMEROverdispersion(model = randomR2$model)
+GLMEROverdispersion(model = randomR2)
 # $residDev
 # [1] 31852.27
 # 
