@@ -359,7 +359,7 @@ Using the MadingleyR R package, you will download the model, run and plot basic 
 
 ### Setting up the model
 
-First, you need to install a package for viewing the output files from the model. You can download the installer (Windows only unfortunately!) <a href="https://dl.dropboxusercontent.com/u/23999497/ScientificDataSet.msi">here</a>. To install, double-click on the downloaded file and follow the instructions.
+First, you need to install a package for viewing the output files from the model. You can download the installer (Windows only unfortunately!) <a href="https://www.dropbox.com/s/lnek6bmwk6d6i8l/ScientificDataSet.msi?dl=1">here</a>. To install, double-click on the downloaded file and follow the instructions.
 
 You need to install an R package that works with NetCDF files (the format of many of the output files of the Madingley Model). Because the installer for this package is available only from my Dropbox, the installation process is a bit complicated.
 
