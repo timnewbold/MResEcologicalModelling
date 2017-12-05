@@ -10,7 +10,7 @@ In this exercise, we will be working with the simple, deterministic Lotka-Volter
 
 ### Simple Logistic Growth
 
-First, let's simulate simple logistic growth. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture</a> that:
+First, let's simulate simple logistic growth. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture</a> that:
 
 dN/dt = rN((K-N)/K)
 
@@ -55,7 +55,7 @@ Now try adjusting the parameters to explore the model behaviour.
 
 ### Adding competition
 
-Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture</a> that the Lotka-Volterra model is simply a logistic growth model for two species, with extra terms to represent the competitive effect that each species has on the other:
+Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture</a> that the Lotka-Volterra model is simply a logistic growth model for two species, with extra terms to represent the competitive effect that each species has on the other:
 
 dN<sub>1</sub>/dt = r<sub>1</sub>N<sub>1</sub>((K<sub>1</sub>-N<sub>1</sub>-&#945;<sub>12</sub>N<sub>2</sub>)/K<sub>1</sub>)
 
@@ -63,7 +63,7 @@ and:
 
 dN<sub>2</sub>/dt = r<sub>2</sub>N<sub>2</sub>((K<sub>2</sub>-N<sub>2</sub>-&#945;<sub>21</sub>N<sub>1</sub>)/K<sub>2</sub>)
 
-First, let's simulate a case where species 1 competitively excludes species 2, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>1</sub> > K<sub>2</sub>/&#945;<sub>21</sub> (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture slides</a>):
+First, let's simulate a case where species 1 competitively excludes species 2, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>1</sub> > K<sub>2</sub>/&#945;<sub>21</sub> (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture slides</a>):
 
 ```R
 # Set the carrying capacities, and the coefficients describing the strength of the competitive effect of each species on the other
@@ -73,7 +73,7 @@ K2 <- 80
 a21 <- 0.5
 ```
 
-We can plot the zero isoclines for the species under these parameters (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture slides</a> if you can't remember what these isoclines are):
+We can plot the zero isoclines for the species under these parameters (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture slides</a> if you can't remember what these isoclines are):
 
 ```R
 # First create a empty plot 
@@ -91,7 +91,7 @@ segments(0, K1/a12, K1, 0, col = "red", lwd = 2)
 segments(0, K2, K2/a21, 0, col = "blue", lwd = 2)
 ```
 
-Since the isoclines don't cross and the line for species 1 is always above and to the right of the line for species 2, we know that species 1 should always competitively exclude species 2 (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture slides</a> if you need a reminder). But we will simulate this just to check:
+Since the isoclines don't cross and the line for species 1 is always above and to the right of the line for species 2, we know that species 1 should always competitively exclude species 2 (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture slides</a> if you need a reminder). But we will simulate this just to check:
 
 ```R
 # We will set the per-capita growth rates equal:
@@ -128,7 +128,7 @@ points(dfLVC$time, dfLVC$N2, type = "l", col = "blue")
 
 Try varying the starting conditions (but not the parameters). Species 1 should always outcompete species 2.
 
-Now let's explore the case where the species co-exist stably, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>2</sub>/&#945;<sub>21</sub> > K<sub>1</sub> (again, see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture slides</a> for an explanation of this):
+Now let's explore the case where the species co-exist stably, i.e. where K<sub>1</sub>/&#945;<sub>12</sub> > K<sub>2</sub> and K<sub>2</sub>/&#945;<sub>21</sub> > K<sub>1</sub> (again, see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture slides</a> for an explanation of this):
 
 ```R
 K1 <- 200
@@ -155,7 +155,7 @@ When you are simulating this model, you will probably need to increase the numbe
 
 In this exercise, we will simulate predator-prey interactions using the deterministic Lotka-Volterra equations. As in Exercise 1, we will solve the model using ordinary differential equations.
 
-First define the model describing changes in the abundance of both predators and prey, where N and P are the numbers of prey and predators, respectively, r is the intrinsic growth rate of the prey population, a is the attack rate of the predator on the prey, e is the conversion efficiency of energy during predation, and m is predator mortality (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture slides</a> for a remdinder of the equations for this model):
+First define the model describing changes in the abundance of both predators and prey, where N and P are the numbers of prey and predators, respectively, r is the intrinsic growth rate of the prey population, a is the attack rate of the predator on the prey, e is the conversion efficiency of energy during predation, and m is predator mortality (see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture slides</a> for a remdinder of the equations for this model):
 
 ```R
 lvpModel <- function(time,state,pars){
@@ -197,7 +197,7 @@ Now try varying some of the parameters to explore the behaviour of the model.
 
 Stochastic events and dispersal can be important in shaping the outcomes of interactions among species. We can include these processes into our simple theoretical models.
 
-Let's start with the generalized form of the Lotka-Volterra competition model (based on exponential growth): dN<sub>i</sub>/dt = rN<sub>i</sub> - N&#931;<sub>j&#8712;J</sub>&#945;<sub>ij</sub>N.
+Let's start with the generalized form of the Lotka-Volterra competition model, allowing us to simulate more than 2 species at a time (based on exponential growth): dN<sub>i</sub>/dt = rN<sub>i</sub> - N&#931;<sub>j&#8712;J</sub>&#945;<sub>ij</sub>N.
 
 We will switch to using a simulation-based approach, rather than ordinary differential equations so that we can incorporate the stochastic effects, i.e.: N<sub>t</sub> = N<sub>t-1</sub> + rN<sub>t-1</sub> - N<sub>t-1</sub>&#931;&#945;N<sub>t-1</sub>.
 
@@ -351,7 +351,7 @@ There are much more sophisticated and better models than this for simulating the
 
 ## Exercise 4: The Madingley Model
 
-This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Of course, as you saw in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/3ComplexEcologicalModels/Lecture3_ComplexEcologicalModels.pdf">lecture</a>, there are lots of other complex systems-level ecological models that could be used. But I am most familiar with the Madingley Model! 
+This session will be based entirely around the Madinlgey general ecosystem model (Harfoot et al., 2014). Of course, as you saw in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2TheoreticalModels/2TheoreticalEcologicalModels2017.pdf">lecture</a>, there are lots of other complex systems-level ecological models that could be used. But I am most familiar with the Madingley Model! 
 
 The Madingley Model will only work on Windows machines at the moment, so get together in groups around a laptop with Windows (don't worry, there will be nothing on this in the exam)
 
