@@ -79,6 +79,57 @@ summary(hhModel1)
 
 The intercept tells us the estimate of log-transformed diversity for primary forest with a forest cover values of 0. Then the negative coefficient estimate for pasture tells us that diversity is lower in pasture than in primary forest, and the negative coefficient estimate for forest cover tells us that diversity decreases with increasing forest cover. The P values tell us that all terms are statistically significant.
 
+To make a more visual presentation of your model results, you could plot them on a graph. The easiest to way to do this is to make predictions of your model for different combinations of input variables.
+
+So first, let's make a dataset to make predictions for the two different land uses:
+
+```R
+nd <- data.frame(Predominant_land_use=c('Primary vegetation',
+                                        'Pasture'),
+                 ForestCover=0)
+```
+
+Now, we can predict the model onto these data, and then get the predicted values:
+
+```R
+preds <- predict(object = hhModel1,newdata=nd,se.fit=TRUE)
+
+y <- preds$fit
+yplus <- preds$fit + 1.96 * preds$se.fit
+yminus <- preds$fit - 1.96 * preds$se.fit
+```
+
+Taking the predicted values +/- 1.96 x the standard error of the predicted value gives us the 95% confidence limits.
+
+Now, we can plot these predicted values as an error bar:
+
+```R
+errbar(x = nd$Predominant_land_use,y = y,
+       yplus = yplus,yminus = yminus)
+```
+
+This clearly shows the model-estimated difference in diversity between primary forest and pasture.
+
+Now let's repeat the exercise for a range of forest cover values:
+
+```R
+nd <- data.frame(Predominant_land_use='Primary vegetation',
+                 ForestCover=seq(from=0,to=100,length.out=100))
+
+preds <- predict(object = hhModel1,newdata=nd,se.fit=TRUE)
+
+y <- preds$fit
+yplus <- preds$fit + 1.96 * preds$se.fit
+yminus <- preds$fit - 1.96 * preds$se.fit
+
+plot(nd$ForestCover,y,type="l",ylim=c(0.29,0.77),
+     xlab="Forest cover",ylab="Log Simpson Diversity")
+points(nd$ForestCover,yplus,type="l",lty=2)
+points(nd$ForestCover,yminus,type="l",lty=2)
+```
+
+This time we used 'plot' instead of 'errbar' to generate a line plot. The 'points' command adds dashed lines for the 95% confidence limits to the existing plot. 
+
 Let's try some simpler models with just land use, just forest cover or a null model with no variables
 
 ```R
