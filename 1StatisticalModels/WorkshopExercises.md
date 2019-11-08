@@ -28,164 +28,7 @@ install_github("timnewbold/StatisticalModels")
 install_github("timnewbold/MResEcologicalModelling",subdir="MResModelling")
 ```
 
-## Exercise 1: Functional responses - Linear Models and Maximum Likelihood Estimation
-
-In this exercise, we will use data on predator functional responses (remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> that these describe the relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
-
-```R
-library(emdbook)
-data(ReedfrogFuncresp)
-```
-
-First, let's plot the functional response to inspect the data:
-
-```R
-plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
-```
-
-It looks as though there might be a linear relationship between these variables. So let's try fitting a simple linear model:
-
-```R
-m1 <- lm(Killed~Initial,data=ReedfrogFuncresp)
-
-m1
-# Coefficients:
-# (Intercept)      Initial  
-#       2.727        0.276
-
-summary(m1)
-# Coefficients:
-#             Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)  2.72651    1.96292   1.389    0.187    
-# Initial      0.27603    0.03948   6.991 6.33e-06 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 5.04 on 14 degrees of freedom
-# Multiple R-squared:  0.7773,    Adjusted R-squared:  0.7614 
-# F-statistic: 48.88 on 1 and 14 DF,  p-value: 6.334e-06
-```
-
-This linear model seems to fit the data very well. However, as you heard in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture today</a>, and will hear much more about in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture tomorrow</a>, there are different theoretical models describing functional responses. One of these (the Type II) functional response is a saturating function:
-
-N<sub>killed</sub> = (aN)/(1+aHN),
-
-where N is initial density, and a and H are the parameters 'attack rate' and 'handling time'.
-
-It is not easy to transform the variables to make a linear relationship from this model, and even if we did do this the parameters would be difficult to interpret. So instead we will fit the model using maximum likelihood estimation. First though, as an experiment, let's refit the linear model using maximum likelihood.
-
-```R
-# We need to load the bblme package
-library(bbmle)
-
-# First we define the likelihood function
-linearNLL <- function(killed,init,m,c,sd){
-  
-  # The following line calculates the expected y values
-  # for a given slope and intercept
-  y.pred <- m * init + c
-  
-  # The next line calculates the likelihood for this model
-  # assuming that the residuals are a normal distribution
-  # around 0 (as in a linear regression)
-  # The 'dnorm' function calculates the probability density
-  # for a given observed value (x) compared to a normal
-  # distribution with a given mean and standard deviation (sd)
-  suppressWarnings(-sum(dnorm(x = killed,mean = y.pred,sd = sd,log = TRUE)))
-  
-}
-
-# Now we run the maximum likelihood estimation
-# This will estimate the values of three parameters:
-# the slope (m) and intercept(c) of the regression,
-# plus the residual error term (sd). For These# parameters,
-# we specify reasonable starting values.
-# We also pass two variables (our response and 
-# explanatory variables): intial prey density 
-# and the number killed
-m2 <- mle2(minuslogl = linearNLL,start = list(m=0.2,c=2,sd=1),
-           data = list(init=ReedfrogFuncresp$Initial,
-                       killed=ReedfrogFuncresp$Killed))
-
-m2
-# Coefficients:
-#         m         c        sd 
-# 0.2760248 2.7265615 4.7141473 
-```
-
-The parameters are of course very similar to those estimated by the linear regression. Before moving on to the more complex functional response model, let's plot the data and the fitted linear relationship:
-
-```R
-plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
-
-# Create a data frame with values of initial density to predict
-preds <- data.frame(Initial=1:100)
-# Predict number of prey killed
-preds$Killed <- m2@coef['m']*preds$Initial+m2@coef['c']
-# Plot (type="l" plots a line, and lwd=2 makes the line thick)
-points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
-```
-
-Now we will fit the more complex 'Type II' functional response model to the data.
-
-```R
-# As before, we first need to define the likelihood function
-binomLL <- function(killed,init,p){
-  
-  # The next two lines just specify that of the parameters we pass (p), 
-  # the first will be attack rate (a), and the second the handling time (h)
-  a = p[1]
-  h = p[2]
-  
-  # This line defines the probability of a prey individual being killed
-  # Note this is the Type II functional response equation from above, divided by
-  # the intial number of prey
-  pkilled <- a/(1+a*h*init)
-  
-  # The likelihood in this case assumes that the observed number 
-  # of kills is a binomial draw where the number of trials is
-  # the initial number of prey, and the probability of being killed
-  # is taken from above
-  -sum(dbinom(x = killed,size = init,prob = pkilled,log = TRUE))
-  
-}
-# This line just defines the names for the parameters
-parnames(binomLL) <- c("a","h")
-
-# Now run the likelihood estimation
-m3 <- mle2(minuslogl = binomLL,start = c(a=0.5,h=0.0125),
-           data = list(init=ReedfrogFuncresp$Initial,
-                       killed=ReedfrogFuncresp$Killed))
-
-m3
-# Coefficients:
-#          a          h 
-# 0.52630319 0.01664362 
-# 
-# Log-likelihood: -46.72
-```
-
-If we compare the AIC values of these models, we can see that the Type II functional response is a slightly better fit to the data (i.e. has a lower AIC value - see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> for a reminder about AIC values):
-```R
-AIC(m2,m3)
-#         AIC df
-# 1 101.02429  3
-# 2  97.44279  2
-```
-
-Finally, we will plot the fitted Type II functional response. Note that the model as defined above predicts the probability that a single prey individual is eaten, so we need to multiply by initial prey density to get the estimate of the total number of prey eaten.
-
-```R
-plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
-
-preds <- data.frame(Initial=1:100)
-preds$Killed <- preds$Initial *
-	m3@coef['a']/(1 + m3@coef['a'] * 
-		m3@coef['h'] * preds$Initial)
-points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
-```
-
-## Exercise 2: Land use impacts on Hymenoptera in Hawaii - Generalized linear models
+## Exercise 1: Land use impacts on Hymenoptera in Hawaii - linear modelling (ANCOVA)
 
 For this section, you will be working with the data on hymenopterans in different land uses in Hawaii, which I described in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>.
 
@@ -196,6 +39,88 @@ First, load my R package associated with these sessions:
 ```R
 library(MResModelling)
 ```
+
+Now, read the data describing the site-level diversity into R
+
+```R
+data(HawaiiHymenopteraSitesSubset)
+```
+
+We will work the columns called Predominant_land_use (which describes whether the site was in primary forest or pasture), ForestCover (% forest cover from the Global Forest Watch dataset) and LogSimpson (log-transformed Simpson Diversity Index)
+
+Let's investigate the data. First, let's check the distribution of the forest cover estimates:
+
+```R
+hist(hhs2$ForestCover)
+```
+
+The data have lots of zero values, which are difficult to deal with. If you have time, have a think about what you might do to get around this issue.
+
+Now let's do some exploration of the effect that forest cover and land use have on the Simpson Diversity Index:
+
+```R
+boxplot(hhs2$LogSimpson~hhs2$Predominant_land_use)
+plot(hhs2$ForestCover,hhs2$LogSimpson)
+```
+
+This seems to suggest that diversity is lower in pasture than in primary forest, but that diversity decreases with increasing forest cover.
+
+Let's build a model to see whether these apparent relationships are statistically significant.
+
+```R
+hhModel1 <- lm(LogSimpson~Predominant_land_use+ForestCover,data=hhs2)
+```
+
+Let's see what the model is telling us about the effect of land use and forest cover on hymenopteran biodiversity:
+
+```R
+summary(hhModel1)
+```
+
+The intercept tells us the estimate of log-transformed diversity for primary forest with a forest cover values of 0. Then the negative coefficient estimate for pasture tells us that diversity is lower in pasture than in primary forest, and the negative coefficient estimate for forest cover tells us that diversity decreases with increasing forest cover. The P values tell us that all terms are statistically significant.
+
+Let's try some simpler models with just land use, just forest cover or a null model with no variables
+
+```R
+hhModel2 <- lm(LogSimpson~Predominant_land_use,data=hhs2)
+hhModel3 <- lm(LogSimpson~ForestCover,data=hhs2)
+hhModel4 <- lm(LogSimpson~1,data=hhs2)
+```
+
+Now we will compare the AIC values of these models (remember that a lower AIC indicates a better-fitting model)
+
+```R
+AIC(hhModel1,hhModel2,hhModel3,hhModel4)
+```
+
+So our original complex model gives the best fit to the data. If you look at the summary of hhModel1 again, you will see that the R2 values are around 4 to 5%. So we did not explain a great deal of variation in diversity, but this is not a bad model.
+
+Let's check whether the model fits the assumptions of standard statistical tests.
+
+First, plot a histogram of the model residuals:
+
+```R
+hist(residuals(hhModel1))
+```
+
+The residuals do not seem to conform very well to a normal distribution. This would be something that you might need to consider if you were doing this analysis in a proper project.
+
+Now, let's check whether the variance is reasonably homogeneous:
+
+```R
+plot(fitted(hhModel1),residuals(hhModel1))
+```
+
+There doesn't seem to be any major change in variance across the range of fitted values.
+
+You can get these diagnostic plots, and others by running this command:
+
+```R
+plot(hhModel1)
+```
+
+## Exercise 2: Land use impacts on Hymenoptera in Hawaii - Generalized linear models
+
 
 Now, load in the Hawaii data describing the abundance of all species:
 
@@ -620,7 +545,166 @@ If you have time, you could consider experimenting with your own models. Perhaps
 
 Before you move onto the final exercise, make sure you are happy that you understand what you have done so far. You will not be assessed on Bayesian models, but if you have time it might be useful to have a go at them.
 
-## Exercise 4: Metabolic Rates - Bayesian Models (If you have time, and are feeling adventurous)
+
+## Exercise 4: Functional responses - Linear Models and Maximum Likelihood Estimation
+
+In this exercise, we will use data on predator functional responses (remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> that these describe the relationship between prey density and number of prey eaten) of East African reed frogs, from Vonesh & Bolker (2005).
+
+```R
+library(emdbook)
+data(ReedfrogFuncresp)
+```
+
+First, let's plot the functional response to inspect the data:
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+```
+
+It looks as though there might be a linear relationship between these variables. So let's try fitting a simple linear model:
+
+```R
+m1 <- lm(Killed~Initial,data=ReedfrogFuncresp)
+
+m1
+# Coefficients:
+# (Intercept)      Initial  
+#       2.727        0.276
+
+summary(m1)
+# Coefficients:
+#             Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)  2.72651    1.96292   1.389    0.187    
+# Initial      0.27603    0.03948   6.991 6.33e-06 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Residual standard error: 5.04 on 14 degrees of freedom
+# Multiple R-squared:  0.7773,    Adjusted R-squared:  0.7614 
+# F-statistic: 48.88 on 1 and 14 DF,  p-value: 6.334e-06
+```
+
+This linear model seems to fit the data very well. However, as you heard in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture today</a>, and will hear much more about in the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/2SimpleEcologicalModels/Lecture2SimpleTheoreticalModels.pdf">lecture tomorrow</a>, there are different theoretical models describing functional responses. One of these (the Type II) functional response is a saturating function:
+
+N<sub>killed</sub> = (aN)/(1+aHN),
+
+where N is initial density, and a and H are the parameters 'attack rate' and 'handling time'.
+
+It is not easy to transform the variables to make a linear relationship from this model, and even if we did do this the parameters would be difficult to interpret. So instead we will fit the model using maximum likelihood estimation. First though, as an experiment, let's refit the linear model using maximum likelihood.
+
+```R
+# We need to load the bblme package
+library(bbmle)
+
+# First we define the likelihood function
+linearNLL <- function(killed,init,m,c,sd){
+  
+  # The following line calculates the expected y values
+  # for a given slope and intercept
+  y.pred <- m * init + c
+  
+  # The next line calculates the likelihood for this model
+  # assuming that the residuals are a normal distribution
+  # around 0 (as in a linear regression)
+  # The 'dnorm' function calculates the probability density
+  # for a given observed value (x) compared to a normal
+  # distribution with a given mean and standard deviation (sd)
+  suppressWarnings(-sum(dnorm(x = killed,mean = y.pred,sd = sd,log = TRUE)))
+  
+}
+
+# Now we run the maximum likelihood estimation
+# This will estimate the values of three parameters:
+# the slope (m) and intercept(c) of the regression,
+# plus the residual error term (sd). For These# parameters,
+# we specify reasonable starting values.
+# We also pass two variables (our response and 
+# explanatory variables): intial prey density 
+# and the number killed
+m2 <- mle2(minuslogl = linearNLL,start = list(m=0.2,c=2,sd=1),
+           data = list(init=ReedfrogFuncresp$Initial,
+                       killed=ReedfrogFuncresp$Killed))
+
+m2
+# Coefficients:
+#         m         c        sd 
+# 0.2760248 2.7265615 4.7141473 
+```
+
+The parameters are of course very similar to those estimated by the linear regression. Before moving on to the more complex functional response model, let's plot the data and the fitted linear relationship:
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+
+# Create a data frame with values of initial density to predict
+preds <- data.frame(Initial=1:100)
+# Predict number of prey killed
+preds$Killed <- m2@coef['m']*preds$Initial+m2@coef['c']
+# Plot (type="l" plots a line, and lwd=2 makes the line thick)
+points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
+```
+
+Now we will fit the more complex 'Type II' functional response model to the data.
+
+```R
+# As before, we first need to define the likelihood function
+binomLL <- function(killed,init,p){
+  
+  # The next two lines just specify that of the parameters we pass (p), 
+  # the first will be attack rate (a), and the second the handling time (h)
+  a = p[1]
+  h = p[2]
+  
+  # This line defines the probability of a prey individual being killed
+  # Note this is the Type II functional response equation from above, divided by
+  # the intial number of prey
+  pkilled <- a/(1+a*h*init)
+  
+  # The likelihood in this case assumes that the observed number 
+  # of kills is a binomial draw where the number of trials is
+  # the initial number of prey, and the probability of being killed
+  # is taken from above
+  -sum(dbinom(x = killed,size = init,prob = pkilled,log = TRUE))
+  
+}
+# This line just defines the names for the parameters
+parnames(binomLL) <- c("a","h")
+
+# Now run the likelihood estimation
+m3 <- mle2(minuslogl = binomLL,start = c(a=0.5,h=0.0125),
+           data = list(init=ReedfrogFuncresp$Initial,
+                       killed=ReedfrogFuncresp$Killed))
+
+m3
+# Coefficients:
+#          a          h 
+# 0.52630319 0.01664362 
+# 
+# Log-likelihood: -46.72
+```
+
+If we compare the AIC values of these models, we can see that the Type II functional response is a slightly better fit to the data (i.e. has a lower AIC value - see the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a> for a reminder about AIC values):
+```R
+AIC(m2,m3)
+#         AIC df
+# 1 101.02429  3
+# 2  97.44279  2
+```
+
+Finally, we will plot the fitted Type II functional response. Note that the model as defined above predicts the probability that a single prey individual is eaten, so we need to multiply by initial prey density to get the estimate of the total number of prey eaten.
+
+```R
+plot(ReedfrogFuncresp$Initial,ReedfrogFuncresp$Killed)
+
+preds <- data.frame(Initial=1:100)
+preds$Killed <- preds$Initial *
+	m3@coef['a']/(1 + m3@coef['a'] * 
+		m3@coef['h'] * preds$Initial)
+points(preds$Initial,preds$Killed,type="l",lwd=2,col="red")
+```
+
+
+## Exercise 5: Metabolic Rates - Bayesian Models (If you have time, and are feeling adventurous)
 
 For this exercise, we will be using the dataset from Hudson et al. (2014) on the field metabolic rates of birds and mammals. The data are estimates of field metabolic rate for individual birds and mammals, with associated estimates of body mass. Remember from the lecture that metabolic rates scale as a power function of body mass - much more of this tomorrow. In Hudson et al.'s data, there are often estimates for several individuals of a species, but sometimes only for one.
 
