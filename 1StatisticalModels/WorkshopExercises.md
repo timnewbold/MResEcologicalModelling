@@ -290,7 +290,7 @@ Clearly the species richness data are not normally distributed. Because species 
 # Model species richness as a function of land use
 m1 <- glm(Species_richness~LandUse,data=hhs,family=poisson)
 
-print(summary(m1))
+summary(m1)
 
 # Also run a null, intercept-only model
 m0 <- glm(Species_richness~1,data=hhs,family=poisson)
