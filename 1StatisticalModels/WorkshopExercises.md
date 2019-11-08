@@ -296,6 +296,21 @@ summary(m1)
 m0 <- glm(Species_richness~1,data=hhs,family=poisson)
 ```
 
+Again, we can compare AIC values to see whether the land-use model or the null model better fits the data:
+
+```R
+AIC(m0,m1)
+```
+
+As with the model of the presence or absence of the individual species, the model including land use is highly significantly better than the null model. But again, let's see how much of the variation in species richness land use explains:
+
+```R
+with(m1,(null.deviance-deviance)/null.deviance)
+```
+
+So land use explains nearly 17% of the variation in species richness. That's a lot for a single explanatory variable. 
+
+
 As before, we will plot an error bar to show the modelled result:
 
 ```R
@@ -313,20 +328,6 @@ errbar(x=nd$LandUse,y=y,yplus=yplus,yminus=yminus)
 ```
 
 So in this case, the model shows that species richness is, on average, slightly higher in secondary vegetation than in primary vegetation, but much lower in pasture than in either of the natural land-use tpyes.
-
-Again, do an analysis of variance to compare the land-use model with the null model:
-
-```R
-anova(m0,m1,test="Chi")
-```
-
-As with the model of the presence or absence of the individual species, the model including land use is highly significantly better than the null model. But again, let's see how much of the variation in species richness land use explains:
-
-```R
-with(m1,(null.deviance-deviance)/null.deviance)
-```
-
-So land use explains nearly 17% of the variation in species richness. That's a lot for a single explanatory variable. 
 
 ## Exercise 3: Land use impacts on biodiversity - Mixed-effects models
 
