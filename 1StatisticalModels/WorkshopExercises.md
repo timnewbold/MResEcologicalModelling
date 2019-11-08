@@ -228,6 +228,23 @@ Looking at the output of model 1 seems to confirm the pattern in presence and ab
 
 In the coefficient table that was displayed when you ran print(summary(m1)), the first line ('(Intercept)'), gives the coefficient estimate for the reference land use (primary vegetation). All of the coefficients are transformed using the link function (logit in this case - see below for transforming back to probabilities). The other coefficients describe the difference compared with primary vegetation in the (transformed) probabilities for the other land uses. You will see that the coefficients for both secondary vegetation and especially for pasture are significantly lower than primary vegetation.
 
+We can compare the AIC values of the land-use model and the null model to see which fits the data better:
+
+```R
+AIC(m0,m1)
+```
+
+This shows that the model including land use is significantly better than the null model. So land use does have a significant effect on the presence or absence of this species at this particular study location in Hawaii. 
+
+Finally, though, let's find out how much of the variation in species presence or absence is explained by land use as a measure of fit of the model. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>, that explained variation in a GLM is (null deviance - residual deviance)/null deviance.
+
+```R
+with(m1,(null.deviance-deviance)/null.deviance)
+# Note that residual deviance is labelled simply 'deviance' in the model object.
+```
+
+This shows that our model explains only around 5% of the variation in species presence or absence. So land use has a significant effect on the species, but clearly there are other factors (not considered in this model) that determine to a large extent whether or not the species is present and is detected at each location in the dataset.
+
 We can plot an error bar to show the modelled result:
 
 ```R
@@ -246,23 +263,6 @@ yminus <- 1/(1+exp(-(preds$fit-1.96*preds$se.fit)))
 # Finally, plot the error bar with the mean and confidence limits of the model predictions for each land use
 errbar(x=nd$LandUse,y=y,yplus=yplus,yminus=yminus)
 ```
-
-Now do an analysis of variance to compare the model with land use to the null model:
-
-```R
-anova(m0,m1,test="Chi")
-```
-
-This shows that the model including land use is significantly better than the null model. So land use does have a significant effect on the presence or absence of this species at this particular study location in Hawaii. 
-
-Finally, though, let's find out how much of the variation in species presence or absence is explained by land use as a measure of fit of the model. Remember from the <a href="https://github.com/timnewbold/MResEcologicalModelling/blob/master/1StatisticalModels/Lecture1ApproachesStatisticalModelling.pdf">lecture</a>, that explained variation in a GLM is (null deviance - residual deviance)/null deviance.
-
-```R
-with(m1,(null.deviance-deviance)/null.deviance)
-# Note that residual deviance is labelled simply 'deviance' in the model object.
-```
-
-This shows that our model explains only around 5% of the variation in species presence or absence. So land use has a significant effect on the species, but clearly there are other factors (not considered in this model) that determine to a large extent whether or not the species is present and is detected at each location in the dataset.
 
 Now we will work with data on the counts of all hymenopteran species at the 754 sampled sites in Hawaii:
 
