@@ -1,1 +1,1 @@
-hhs2 <- read.csv("HawaiiHymenopteraSitesSubset.csv")
+hhs2 <- read.csv("HawaiiHymenopteraSitesSubset.rds")
