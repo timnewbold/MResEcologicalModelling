@@ -218,7 +218,7 @@ Because the response variable that we are interested in (species presence or abs
 # Run a model of species presence or absence as a function of land use
 m1 <- glm(PresAbs~LandUse,data=hh.sp,family=binomial)
 
-print(summary(m1))
+summary(m1)
 
 # Also, run a null model (with just an intercept) with which to compare our land-use model
 m0 <- glm(PresAbs~1,data=hh.sp,family=binomial)
