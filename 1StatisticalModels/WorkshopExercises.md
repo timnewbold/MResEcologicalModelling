@@ -409,7 +409,29 @@ MEModel2
 # Number of obs: 13197, groups:  SSB, 1531; SS, 428
 ```
 
-Now we have identified our random-effects structure, we can select a combination of fixed effects that adequately describes the variation in our response variable (log-transformed total abundance in this case). One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My GLMERSelect function in the StatisticalModels package does this for you. The call for this function separates out the random effects (specified via 'randomStruct'), and separates the categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
+Now we have identified our random-effects structure, we can select a combination of fixed effects that adequately describes the variation in our response variable (log-transformed total abundance in this case). If we look at the model output table, we can see that distance to nearest road has the smallest t value, followed by human population density, followed by the land-use coefficients. So let's try dropping distance to road first:
+
+```R
+MEModel3 <- lmer(LogAbund~LandUse+logHPD.rs+(1|SS)+(1|SSB),
+				data=model.data)
+```
+
+We can compare this to the full model using analysis of variance or simply by comparing AIC values:
+
+```R
+AIC(MEModel2,MEModel3)
+#          df      AIC
+# MEModel2 11 33798.10
+# MEModel3 10 33793.46
+
+anova(MEModel2,MEModel3)
+#          Df   AIC   BIC logLik deviance  Chisq Chi Df Pr(>Chisq)
+# MEModel3 10 33764 33838 -16872    33744                         
+# MEModel2 11 33766 33848 -16872    33744 0.0063      1     0.9367
+
+```
+
+One way to do this, as with simpler statistical models such as linear models, is to employ backward stepwise model selection. This entails dropping each term in turn and testing whether there is a significant reduction in the explained variation. My GLMERSelect function in the StatisticalModels package does this for you. The call for this function separates out the random effects (specified via 'randomStruct'), and separates the categorical fixed effects (fixedFactors) from continuous effects (fixedTerms). The fixedTerms parameter specifies that you want to start with quadratic polynomials (i.e. polynomials of order 2) of human population density and distance to nearest road. During model selection, simpler polynomial terms will be tested. The verbose=TRUE just means that the full details of the steps in the model selection will be printed on the screen.
 
 ```R
 abundModelSelect <- GLMERSelect(modelData = PREDICTSSites,responseVar = "LogAbund",
