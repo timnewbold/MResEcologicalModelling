@@ -386,16 +386,16 @@ If we compare the AIC values of these two models, we can see that the one includ
 
 ```R
 AIC(MEModel1,MEModel2)
-#               df      AIC
-# MEModel1 12 34327.07
-# MEModel2 13 33758.41
+#          df      AIC
+# MEModel1 10 34388.39
+# MEModel2 11 33798.10
 ```
 
 If you look at the model output, in the column 'Std.Dev.' under 'Random effects:', you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
 
 
 ```R
-random2
+MEModel2
 # Linear mixed model fit by REML ['lmerMod']
 # Formula: LogAbund ~ LandUse + poly(logHPD.rs, 2) + poly(logDistRd.rs,  
 #     2) + (1 | SS) + (1 | SSB)
