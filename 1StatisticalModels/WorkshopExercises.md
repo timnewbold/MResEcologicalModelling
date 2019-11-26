@@ -679,6 +679,11 @@ Now let's see how much of the variation in species richness is explained by the 
 
 ```R
 R2GLMER(model=richModelSelect$model)
+# $conditional
+# [1] 0.5885302
+# 
+# $marginal
+# [1] 0.005972607
 ```
 
 As with the model of total community abundance, a relatively high proportion of variation in species richness is explained by the random and fixed effects togther, but a very small proportion is explained by the fixed effects alone.
