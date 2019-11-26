@@ -397,15 +397,15 @@ If you look at the model output, in the column 'Std.Dev.' under 'Random effects:
 ```R
 MEModel2
 # Linear mixed model fit by REML ['lmerMod']
-# Formula: LogAbund ~ LandUse + poly(logHPD.rs, 2) + poly(logDistRd.rs,  
-#     2) + (1 | SS) + (1 | SSB)
-#    Data: modelData
-# REML criterion at convergence: 33732.41
+# Formula: 
+# LogAbund ~ LandUse + logHPD.rs + logDistRd.rs + (1 | SS) + # # (1 | SSB)
+#    Data: model.data
+# REML criterion at convergence: 33776.1
 # Random effects:
 #  Groups   Name        Std.Dev.
-#  SSB      (Intercept) 0.4410  
-#  SS       (Intercept) 2.1926  
-#  Residual             0.7766  
+#  SSB      (Intercept) 0.4486  
+#  SS       (Intercept) 2.1935  
+#  Residual             0.7768  
 # Number of obs: 13197, groups:  SSB, 1531; SS, 428
 ```
 
