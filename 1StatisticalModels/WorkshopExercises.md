@@ -365,7 +365,7 @@ model.data <- na.omit(model.data)
 
 # Fixed effects are specified as in a normal linear model,
 # Random effects are specified as e.g. (1|random_term)+(1|random_term2)
-random1 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS),
+MEModel1 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS),
 				data=model.data)
 ```
 
@@ -378,17 +378,17 @@ If two factors that you want to include are overlapping then they are referred t
 An alternative structure to the data is to have nested random effects. The case of spatial blocks within studies in the PREDICTS data is an example - a particular spatial block can only belong to one study. In this case, there are two ways to fit the random-effects structure. Sometimes the factors are specified in a way that doesn't account for their nestedness. For example, if there were 4 spatial blocks numbered 1 to 4 in one study, and 5 spatial blocks numbered 1 to 5 in a second study. In this case, the model has no way to know that block 1 in study 1 shouldn't be treated as being the same as block 1 in study 2. The hierarchical nature of the random effect must then be specified in the model as follows: (1|SS/SSB). Alternatively the hierarchical structure can be accounted for in the specification of the variables, for example by naming the spatial blocks 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, and 2.5, where the first number indicates the identity of the study. In this case, the random effects can be specified either in the nested fashion (1|SS/SSB) or in the same way as crossed random effects (1|SS)+(1|SSB). This latter approach is easier to work with and is the way we will use with the PREDICTS data (where the nested random effects were specified in the data).
 
 ```R
-random2 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB),
+MEModel2 <- lmer(LogAbund~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB),
 				data=model.data)
 ```
 
 If we compare the AIC values of these two models, we can see that the one including the effect of spatial structure of sites within studies is strongly supported over the one that includes only variation among studies:
 
 ```R
-AIC(random1,random2)
+AIC(MEModel1,MEModel2)
 #               df      AIC
-# random1 12 34327.07
-# random2 13 33758.41
+# MEModel1 12 34327.07
+# MEModel2 13 33758.41
 ```
 
 If you look at the model output, in the column 'Std.Dev.' under 'Random effects:', you will see that study explained the greatest portion of the variation in abundance, but that the spatial structure of sites within studies also explained a substantial portion:
