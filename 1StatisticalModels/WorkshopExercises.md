@@ -536,6 +536,19 @@ PlotGLMERContinuous(model = abundModelSelect$model,data = abundModelSelect$data,
 
 For this function, you need to specify all of the terms (factors and continuous effects) that were in the model to allow the function to plot. The 'otherFactors = list(LandUse="Primary Vegetation")' term specifies that we will plot predicted values for primary vegetation.
 
+Calculating R<sup>2</sup> values to assess how much variation our model explains is more complicated for mixed-effects models. Nakagawa & Schielzeth introduced a method for calculating psuedo-R<sup>2</sup> values for mixed-effects models. This distinguishes between conditional R<sup>2</sup>, which describes the variation explained by both random and fixed effects, and marginal R<sup>2</sup>, which is the variation explained by the fixed effects only. I have implemented a version of this method in the function R2GLMER:
+
+```R
+R2GLMER(abundModelSelect$model)
+# $conditional
+# [1] 0.8927589
+# 
+# $marginal
+# [1] 0.002845271
+```
+
+This shows that while a lot of variation is explained by both random and fixed effects, land use and human population density alone explain a tiny fraction of the variation in recorded total abundance across sites. This is common with mixed-effects models, especially when there is a great deal of variation across the hierarchical structure of the data, as there is with the PREDICTS database.
+
 Now we will construct similar models for species richness. There is one extra complication introduced in modelling species richness: over-dispersion. It is common to model species richness assuming a Poisson distribution of errors. However, in a Poisson distribution, the variance of the values is equal to the mean of values. Observed species richness values commonly have a variance greater than the mean, a situation known as over-dispersion.
 
 There are a number of solutions to over-dispersion. One is to use a more appropriate error distribution, such as a quasi-poisson or negative binomial distribution. There are some packages that can fit generalized linear mixed-effects models with a negative binomial distribution of errors. However, these packages are missing some of the functionality of the lme4 package, which we have been using so far. Another solution is to fit a random-intercept term with one level for each observation in the dataset (don't worry about why this is the case, but if you are interested see Rigby et al., 2008). In the case of the PREDICTS data we have been using, this would be a random intercept corresponding to site identity ('SSBS' column in the dataset).
