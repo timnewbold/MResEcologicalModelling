@@ -675,6 +675,14 @@ PlotGLMERContinuous(model = richModelSelect$model,data = richModelSelect$data,
                     ylab = "Species richness",logLink = "e")
 ```
 
+Now let's see how much of the variation in species richness is explained by the model:
+
+```R
+R2GLMER(model=richModelSelect$model)
+```
+
+As with the model of total community abundance, a relatively high proportion of variation in species richness is explained by the random and fixed effects togther, but a very small proportion is explained by the fixed effects alone.
+
 If you have time, you could consider experimenting with your own models. Perhaps you could include the effects of land-use intensity, or consider interactions among the explanatory variables. Let me know if you need a hand trying these things.
 
 Before you move onto the final exercise, make sure you are happy that you understand what you have done so far. You will not be assessed on Bayesian models, but if you have time it might be useful to have a go at them.
