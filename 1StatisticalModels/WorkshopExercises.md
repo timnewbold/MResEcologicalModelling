@@ -561,13 +561,13 @@ model.data <- na.omit(model.data)
 
 # Here we will fit a <i>generalized<i> linear model, assuming a Poisson
 # distribution of errors
-randomR1 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS),family="poisson",data=model.data)
-randomR2 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB),family="poisson",data=model.data)
+GMEModel1 <- glmer(Species_richness~LandUse+logHPD.rs+logDistRd.rs+(1|SS),family="poisson",data=model.data)
+GMEModel2 <- glmer(Species_richness~LandUse+logHPD.rs+logDistRd.rs+(1|SS)+(1|SSB),family="poisson",data=model.data)
 
-AIC(randomR1,randomR2)
-#                df      AIC
-# randomR1 11 102591.5
-# randomR2 12 100695.0
+AIC(GMEModel1,GMEModel2)
+#           df      AIC
+# GMEModel1  9 102616.4
+# GMEModel2 10 100697.9
 ```
 
 As with the models of total abundance, the random-effects structure that includes the effect of the spatial structure of sites is strongly favoured.
@@ -575,7 +575,7 @@ As with the models of total abundance, the random-effects structure that include
 One way to test for over-dispersion is to compare the residual deviance to the residual degrees of freedom of a model. If the deviance is much larger than the degrees of freedom, this is an indication of over-dispersion (there other possible reasons though). There is a function in my StatisticalModels package that does this:
 
 ```R
-GLMEROverdispersion(model = randomR2)
+GLMEROverdispersion(model = GMEModel2)
 # $residDev
 # [1] 31852.27
 # 
@@ -592,26 +592,26 @@ GLMEROverdispersion(model = randomR2)
 The large ratio of residual deviance to residual degrees of freedom indicates the presence of over-dispersion (confirmed by the significant chi-square test). Therefore, we will try a random-effects structure with a nested effect of site, within spatial block, within study. (warning, this will take a little time to run!):
 
 ```R
-randomR3 <- glmer(Species_richness~LandUse+poly(logHPD.rs,2)+poly(logDistRd.rs,2)+(1|SS)+(1|SSB)+(1|SSBS),family="poisson",data=model.data)
+GMEModel3 <- glmer(Species_richness~LandUse+logHPD.rs+logDistRd.rs+(1|SS)+(1|SSB)+(1|SSBS),family="poisson",data=model.data)
 
-AIC(randomR2,randomR3)
-#                df       AIC
-# randomR2 12 100695.04
-# randomR3 13  92211.73
+AIC(GMEModel2,GMEModel3)
+#           df       AIC
+# GMEModel2 10 100697.93
+# GMEModel3 11  92233.77
 ```
 
 The comparison of AIC values suggests that the random-effects structure including site is strongly favoured, and re-running the over-dispersion test shows that including an observation-level random effect has removed the over-dispersion (in fact, there is now under-dispersion):
 
 ```R
-GLMEROverdispersion(model = randomR3)
+GLMEROverdispersion(model = GMEModel3)
 # $residDev
-# [1] 7448.711
+# [1] 7452.849
 # 
 # $residDF
-# [1] 15620
+# [1] 15622
 # 
 # $ratio
-# [1] 0.4768701
+# [1] 0.4770739
 # 
 # $P.ChiSq
 # [1] 1
